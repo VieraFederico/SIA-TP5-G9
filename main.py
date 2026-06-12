@@ -10,6 +10,7 @@ from network.neuron_layer import NeuronLayer
 from activation.relu import ReLUActivation  # or tanh, logistic, etc.
 from activation.identity import IdentityActivation
 from noise.gaussean_noise import GaussianNoise
+from noise.salt_n_pepper import SaltNPepperNoise
 from optimizer.adam import AdamOptimizer
 
 from optimizer.gradient_descent import GradientDescent
@@ -26,10 +27,14 @@ def main():
     # 1. Load your font data
     X_train = load_fonts()  # Shape: (32, 35) - 32 fonts, 35 features each
     Zeta = X_train
+
+
+
     orig_X = X_train
     if with_noise:
         gauss = GaussianNoise(0.5)
-        X_train = gauss.add_noise(X_train)
+        salt = SaltNPepperNoise(0.01)
+        X_train = salt.add_noise(X_train)
 
     # 2. Create activation functions
     relu = ReLUActivation()
@@ -90,7 +95,7 @@ def main():
             eta=0.01,
             training_mode="batch",
             batch_size=5,
-            epochs=1000,
+            epochs=7500,
             epsilon=1e-3,
         )
     )
