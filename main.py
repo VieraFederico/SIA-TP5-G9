@@ -58,7 +58,7 @@ def main():
     ])
 
     latent_space = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=4, n_neurons=2, activation=relu),  # bottleneck
+        NeuronLayer(n_inputs=4, n_neurons=2, activation=tanh),  # bottleneck
     ])
 
     decoder = MultilayerPerceptron(layers=[
