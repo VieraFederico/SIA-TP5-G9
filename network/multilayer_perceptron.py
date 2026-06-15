@@ -18,11 +18,12 @@ class MultilayerPerceptron(Model):
             x = layer.forward(x)
         return x
 
-    def backward(self, grad_output: Array) -> None:
+    def backward(self, grad_output: Array) -> Array:
         """Retropropaga δ por todas las capas en orden inverso (regla de la cadena)."""
         delta = grad_output
         for layer in reversed(self.layers):
             delta = layer.backward(delta)
+        return delta
 
     def get_weights(self) -> list[tuple[Array, Array]]:
         """Retorna lista de (weights, bias) por capa."""

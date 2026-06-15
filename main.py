@@ -5,6 +5,7 @@ from activation.tanh import TanhActivation
 from cost.binary_cross_entropy import BinaryCrossEntropyCost
 from cost.mse import MSECost
 from font import load_fonts, visualize_font
+from network.autoencoder import Autoencoder
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
 from activation.relu import ReLUActivation  # or tanh, logistic, etc.
@@ -26,15 +27,15 @@ def main():
 
     # 1. Load your font data
     X_train = load_fonts()  # Shape: (32, 35) - 32 fonts, 35 features each
-    Zeta = X_train
 
 
 
-    orig_X = X_train
+    orig_X = X_train.copy()
     if with_noise:
         gauss = GaussianNoise(0.5)
         salt = SaltNPepperNoise(0.01)
         X_train = salt.add_noise(X_train)
+    zeta_train = orig_X if with_noise else X_train
 
     # 2. Create activation functions
     relu = ReLUActivation()
@@ -47,17 +48,20 @@ def main():
     # Create activation functions
 
     logistic = LogisticActivation(beta=1.0)
-    # ...
-    layers = [
+    encoder = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=35, n_neurons=30, activation=relu),
         NeuronLayer(n_inputs=30, n_neurons=25, activation=relu),
         NeuronLayer(n_inputs=25, n_neurons=20, activation=relu),
         NeuronLayer(n_inputs=20, n_neurons=16, activation=relu),
         NeuronLayer(n_inputs=16, n_neurons=8, activation=relu),
         NeuronLayer(n_inputs=8, n_neurons=4, activation=relu),
+    ])
 
+    latent_space = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=4, n_neurons=2, activation=relu),  # bottleneck
+    ])
 
+    decoder = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=2, n_neurons=4, activation=relu),
         NeuronLayer(n_inputs=4, n_neurons=8, activation=relu),
         NeuronLayer(n_inputs=8, n_neurons=16, activation=relu),
@@ -65,9 +69,13 @@ def main():
         NeuronLayer(n_inputs=20, n_neurons=25, activation=relu),
         NeuronLayer(n_inputs=25, n_neurons=30, activation=relu),
         NeuronLayer(n_inputs=30, n_neurons=35, activation=logistic),  # <--- Changed
-    ]
+    ])
 
-    model = MultilayerPerceptron(layers=layers)
+    model = Autoencoder(
+        encoder=encoder,
+        latent_space=latent_space,
+        decoder=decoder,
+    )
 
     # 4. Create training components
     bce = BinaryCrossEntropyCost()
@@ -89,7 +97,7 @@ def main():
             split_test=0.0,
             activation="relu",
             beta=1.0,
-            architecture=[35, 16, 8,2,8,16, 35],
+            architecture=[35, 30, 25, 20, 16, 8, 4, 2, 4, 8, 16, 20, 25, 30, 35],
             cost_function="mse",
             optimizer="adam",
             eta=0.01,
@@ -104,13 +112,16 @@ def main():
     history = trainer.fit(
         model=model,
         X_train=X_train,
-        zeta_train=X_train,  # For autoencoder: output = input
+        zeta_train=zeta_train,  # regular AE: input -> input; denoising AE: noisy -> clean
         X_val=None,
         zeta_val=None
     )
 
     # 6. Test the reconstruction
     reconstructed = np.array([model.forward(font) for font in X_train])
+    reconstruction_error = mse.compute(zeta_train, reconstructed)
+    print(f"Training epochs: {history['epochs']}")
+    print(f"Reconstruction MSE: {reconstruction_error:.6f}")
 
     # 7. Visualize
 
@@ -147,4 +158,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

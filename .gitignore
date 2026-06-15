@@ -1,0 +1,5 @@
+.idea
+.gitignore
+.venv
+__pycache__
+*.pyc
