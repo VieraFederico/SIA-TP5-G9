@@ -1,3 +1,8 @@
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from activation.activation import Array
 from network.model import Model
 from network.multilayer_perceptron import MultilayerPerceptron
@@ -22,6 +27,37 @@ class Autoencoder(Model):
 
     def encode(self, x: Array) -> Array:
         return self.latent_space.forward(self.encoder.forward(x))
+
+    def get_latent_positions(self, X: Array) -> Array:
+        return np.array([self.encode(x) for x in X])
+
+    def plot_latent_space(
+        self,
+        X: Array,
+        labels: list[str] | None = None,
+        output_path: str = "latent_space.png",
+        title: str = "2D latent space",
+    ) -> str:
+        positions = self.get_latent_positions(X)
+        if positions.shape[1] != 2:
+            raise ValueError(f"Expected 2D latent space, got shape {positions.shape}")
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.scatter(positions[:, 0], positions[:, 1], color="tab:blue")
+
+        if labels is not None:
+            for label, (x, y) in zip(labels, positions):
+                ax.annotate(label, (x, y), textcoords="offset points", xytext=(5, 5))
+
+        ax.set_title(title)
+        ax.set_xlabel("Latent dimension 1")
+        ax.set_ylabel("Latent dimension 2")
+        ax.grid(True, alpha=0.3)
+
+        path = Path(output_path)
+        fig.savefig(path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        return str(path)
 
     def decode(self, z: Array) -> Array:
         return self.decoder.forward(z)

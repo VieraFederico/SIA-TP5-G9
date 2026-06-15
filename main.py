@@ -83,7 +83,7 @@ def main():
     adam = AdamOptimizer(learning_rate=0.001)
     grad = GradientDescent(learning_rate=0.001)
     trainer = Trainer(
-        cost_fn=mse,
+        cost_fn=bce,
         optimizer=adam,
         metrics=[],
         cfg=ExperimentConfig(
@@ -98,7 +98,7 @@ def main():
             activation="relu",
             beta=1.0,
             architecture=[35, 30, 25, 20, 16, 8, 4, 2, 4, 8, 16, 20, 25, 30, 35],
-            cost_function="mse",
+            cost_function="binary_cross_entropy",
             optimizer="adam",
             eta=0.01,
             training_mode="batch",
@@ -119,9 +119,18 @@ def main():
 
     # 6. Test the reconstruction
     reconstructed = np.array([model.forward(font) for font in X_train])
-    reconstruction_error = mse.compute(zeta_train, reconstructed)
+    reconstruction_error = bce.compute(zeta_train, reconstructed)
     print(f"Training epochs: {history['epochs']}")
-    print(f"Reconstruction MSE: {reconstruction_error:.6f}")
+    print(f"Reconstruction BCE: {reconstruction_error:.6f}")
+
+    glyph_labels = [chr(code) if code < 0x7f else "DEL" for code in range(0x60, 0x80)]
+    latent_plot_path = model.plot_latent_space(
+        X=orig_X,
+        labels=glyph_labels,
+        output_path="latent_space.png",
+        title="Font patterns in 2D latent space",
+    )
+    print(f"Latent space plot saved to: {latent_plot_path}")
 
     # 7. Visualize
 
