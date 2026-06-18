@@ -1,0 +1,86 @@
+"""
+evaluation.py — Reporte de error de reconstrucción por carácter.
+
+Tarea 1: al final de una corrida, decir cuánto error hay entre cada letra
+original y su reconstrucción. El error principal es en PÍXELES (de 35),
+porque el enunciado pide "error máximo de 1 píxel incorrecto".
+
+Solo depende de numpy, así que corre sin importar el lío de imports src./no-src.
+"""
+import numpy as np
+
+
+def pixel_error_report(
+    model,
+    X_target,
+    X_input=None,
+    labels=None,
+    reconstruct=None,
+    threshold: float = 0.5,
+    max_errors_ok: int = 1,
+):
+    """
+    Reconstruye cada patrón, lo binariza y cuenta píxeles mal contra el original.
+
+    Args:
+        model:       modelo entrenado (Autoencoder o VariationalAutoencoder).
+        X_target:    (n, 35) patrones ORIGINALES limpios = lo que se espera a la salida.
+        X_input:     (n, 35) lo que se le da de entrada al modelo.
+                     Si es None, usa X_target (caso AE básico: entrada = objetivo).
+                     Para el DAE pasá acá la versión RUIDOSA y dejá X_target limpio.
+        labels:      lista de nombres por patrón, ej ['a','b',...]. Opcional.
+        reconstruct: función x -> x'. Por defecto model.forward.
+                     IMPORTANTE: para el VAE pasá model.reconstruct (es determinista;
+                     model.forward samplea y daría resultados distintos cada vez).
+        threshold:   umbral para pasar la salida continua a 0/1 (0.5 por defecto).
+        max_errors_ok: umbral del enunciado (1 píxel).
+
+    Returns:
+        dict con el detalle por carácter y el resumen.
+    """
+    if X_input is None:
+        X_input = X_target
+    if reconstruct is None:
+        reconstruct = model.forward
+
+    rows = []
+    for i in range(len(X_target)):
+        x_hat = np.asarray(reconstruct(X_input[i])).reshape(-1)
+        target_bin = (np.asarray(X_target[i]).reshape(-1) > threshold).astype(int)
+        recon_bin = (x_hat > threshold).astype(int)
+
+        pixel_errors = int(np.sum(target_bin != recon_bin))
+        # error continuo, por si se quiere comparar (no es el criterio del enunciado)
+        mse = float(np.mean((np.asarray(X_target[i]).reshape(-1) - x_hat) ** 2))
+
+        label = labels[i] if labels is not None else str(i)
+        rows.append({"label": label, "pixel_errors": pixel_errors, "mse": mse})
+
+    pass_count = sum(1 for r in rows if r["pixel_errors"] <= max_errors_ok)
+    max_err = max(r["pixel_errors"] for r in rows)
+    mean_err = sum(r["pixel_errors"] for r in rows) / len(rows)
+    total = len(rows)
+
+    print("\n" + "=" * 46)
+    print("  RECONSTRUCCIÓN — error por carácter")
+    print("=" * 46)
+    print(f"  {'char':>6}  {'px err':>7}  {'mse':>8}  {'<=' + str(max_errors_ok) + '?':>5}")
+    print("-" * 46)
+    for r in rows:
+        ok = "OK" if r["pixel_errors"] <= max_errors_ok else "X"
+        print(f"  {r['label']:>6}  {r['pixel_errors']:>7}  {r['mse']:>8.4f}  {ok:>5}")
+    print("-" * 46)
+    print(f"  Caracteres con <= {max_errors_ok} px : {pass_count}/{total}")
+    print(f"  Peor caso           : {max_err} px")
+    print(f"  Promedio            : {mean_err:.2f} px")
+    objetivo = "ALCANZADO" if max_err <= max_errors_ok else "NO alcanzado"
+    print(f"  Objetivo enunciado  : {objetivo}")
+    print("=" * 46 + "\n")
+
+    return {
+        "per_char": rows,
+        "pass_count": pass_count,
+        "max_error": max_err,
+        "mean_error": mean_err,
+        "total": total,
+    }

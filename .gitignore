@@ -1,5 +1,11 @@
 .idea
 .gitignore
 .venv
+venv/
 __pycache__
 *.pyc
+
+# Salidas generadas por las corridas
+output/
+*.npz
+*.png
