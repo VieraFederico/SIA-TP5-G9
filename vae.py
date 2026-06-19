@@ -5,6 +5,7 @@ Sólo arma la topología del VAE (encoder + cabezas μ y logσ² + decoder); el
 entrenamiento, reporte y gráfico los maneja experiment.run_experiment.
 El término KL se suma en el backward del modelo, no en la función de costo.
 """
+from graphs import plot_latent_distributions
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
 from network.variational_autoencoder import VariationalAutoencoder
@@ -53,6 +54,12 @@ def build_vae_model(act: dict) -> VariationalAutoencoder:
     )
 
 
+def _plot_latent(model, clean, labels, output_path, title, subtitle) -> str:
+    """Saca (μ, σ) por patrón del VAE y delega el gráfico en graphs/."""
+    means, standard_deviations = model.get_latent_distributions(clean)
+    return plot_latent_distributions(means, standard_deviations, labels, output_path, title, subtitle)
+
+
 def _vae_report(model, x_input, recon_bce) -> None:
     """Métricas extra del VAE: KL y loss total (BCE + kl_weight·KL)."""
     kl = model.kl_divergence(x_input)
@@ -92,6 +99,7 @@ def run_vae(
         model_type="vae",
         hp=hp,
         plot_title=f"{datatype.capitalize()} VAE latent distributions",
+        plot=_plot_latent,
         reconstruct=model.reconstruct,  # determinista: usa μ, no samplea
         load_path=load_path,
         save=save,

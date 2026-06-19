@@ -57,6 +57,30 @@ def hyperparams_slug(hp: dict) -> str:
     return "_".join(parts)
 
 
+def hyperparams_subtitle(hp: dict) -> str:
+    """Todos los hiperparámetros del run, en una línea, para el pie del gráfico.
+
+    Suma a los del run (data, ruido, epochs, lr, batch/kl...) los fijos del TP
+    que no viven en hp: optimizador Adam (β1, β2), modo de entrenamiento y ε.
+    """
+    full = {
+        **hp,
+        "opt": "adam",
+        "b1": 0.9,
+        "b2": 0.999,
+        "mode": TRAINING_MODE,
+        "eps": EPSILON,
+    }
+    parts = []
+    for key, value in full.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            value = "on" if value else "off"
+        parts.append(f"{key}={value}")
+    return "  ·  ".join(parts)
+
+
 def output_path(model_type: str, kind: str, hp: dict, filename: str) -> str:
     """Arma output/<model_type>/<kind>/<slug>/<filename> y crea las carpetas."""
     directory = OUTPUT_ROOT / model_type / kind / hyperparams_slug(hp)
@@ -140,6 +164,7 @@ def run_experiment(
     model_type: str,
     hp: dict,
     plot_title: str,
+    plot,
     reconstruct,
     load_path: str | None = None,
     save: bool = False,
@@ -154,6 +179,10 @@ def run_experiment(
     Args:
         model_type:   "ae" o "vae"; primer nivel de la carpeta de salida.
         hp:           hiperparámetros del run -> nombre de la subcarpeta.
+        plot:         callable(model, clean, labels, output_path, title, subtitle)
+                      -> ruta. Lo inyectan ae.py / vae.py: sacan los datos del
+                      modelo y llaman a la función de graphs/ que corresponda. El
+                      subtitle es la línea de hiperparámetros (hyperparams_subtitle).
         reconstruct:  función x -> x' determinista (model.forward para AE,
                       model.reconstruct para VAE).
         save:         si True, guarda los pesos en output/.../weights/.../weights.npz.
@@ -181,13 +210,15 @@ def run_experiment(
     if extra_report is not None:
         extra_report(model, x_input, recon_bce)
 
-    plot = model.plot_latent_space(
-        X=clean,
-        labels=labels,
-        output_path=output_path(model_type, "latent_space", hp, "latent_space.png"),
-        title=plot_title,
+    plot_file = plot(
+        model,
+        clean,
+        labels,
+        output_path(model_type, "latent_space", hp, "latent_space.png"),
+        plot_title,
+        hyperparams_subtitle(hp),
     )
-    print(f"Latent space plot saved to: {plot}")
+    print(f"Latent space plot saved to: {plot_file}")
 
     pixel_error_report(
         model,

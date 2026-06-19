@@ -5,7 +5,7 @@ Sólo arma la topología del AE; el entrenamiento, reporte y gráfico los maneja
 experiment.run_experiment. Con with_noise=True la entrada se corrompe y el
 objetivo es el patrón limpio -> denoising AE.
 """
-from font import visualize_font
+from graphs import plot_latent_points, visualize_font
 from network.autoencoder import Autoencoder
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
@@ -51,6 +51,12 @@ def build_ae_model(act: dict) -> Autoencoder:
     return Autoencoder(encoder=encoder, latent_space=latent_space, decoder=decoder)
 
 
+def _plot_latent(model, clean, labels, output_path, title, subtitle) -> str:
+    """Saca las posiciones latentes del AE y delega el gráfico en graphs/."""
+    positions = model.get_latent_positions(clean)
+    return plot_latent_points(positions, labels, output_path, title, subtitle)
+
+
 def _visualize_samples(clean, x_input, reconstructed, with_noise: bool) -> None:
     """Muestra como ASCII los primeros 5 caracteres (a-e): entrada y reconstrucción."""
     names = ["a", "b", "c", "d", "e"]
@@ -94,6 +100,7 @@ def run_ae(
         model_type="ae",
         hp=hp,
         plot_title=f"{datatype.capitalize()} patterns in 2D latent space",
+        plot=_plot_latent,
         reconstruct=model.forward,
         load_path=load_path,
         save=save,

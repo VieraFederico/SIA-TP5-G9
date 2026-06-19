@@ -1,10 +1,4 @@
-from pathlib import Path
-
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Ellipse
 
 from activation.activation import Array
 from network.model import Model
@@ -101,73 +95,6 @@ class VariationalAutoencoder(Model):
             means.append(mean)
             standard_deviations.append(standard_deviation)
         return np.array(means), np.array(standard_deviations)
-
-    def plot_latent_space(
-        self,
-        X: Array,
-        labels: list[str] | None = None,
-        output_path: str = "latent_space.png",
-        title: str = "2D latent space",
-        samples_per_pattern: int = 20,
-        ellipse_std: float = 1.0,
-    ) -> str:
-        means, standard_deviations = self.get_latent_distributions(X)
-        if means.shape[1] != 2:
-            raise ValueError(f"Expected 2D latent space, got shape {means.shape}")
-
-        fig, ax = plt.subplots(figsize=(9, 7))
-
-        for mean, standard_deviation in zip(means, standard_deviations):
-            if samples_per_pattern > 0:
-                samples = np.random.normal(
-                    loc=mean,
-                    scale=standard_deviation,
-                    size=(samples_per_pattern, 2),
-                )
-                ax.scatter(
-                    samples[:, 0],
-                    samples[:, 1],
-                    color="tab:blue",
-                    alpha=0.12,
-                    s=12,
-                    linewidths=0,
-                )
-
-            ellipse = Ellipse(
-                xy=mean,
-                width=2 * ellipse_std * standard_deviation[0],
-                height=2 * ellipse_std * standard_deviation[1],
-                angle=0,
-                edgecolor="tab:orange",
-                facecolor="none",
-                alpha=0.55,
-                linewidth=1.2,
-            )
-            ax.add_patch(ellipse)
-
-        ax.scatter(
-            means[:, 0],
-            means[:, 1],
-            color="tab:red",
-            s=35,
-            label="Latent mean μ",
-            zorder=3,
-        )
-
-        if labels is not None:
-            for label, (x, y) in zip(labels, means):
-                ax.annotate(label, (x, y), textcoords="offset points", xytext=(5, 5))
-
-        ax.set_title(title)
-        ax.set_xlabel("Latent mean dimension 1")
-        ax.set_ylabel("Latent mean dimension 2")
-        ax.grid(True, alpha=0.3)
-        ax.legend(["Samples z", f"{ellipse_std:g}σ region", "Latent mean μ"])
-
-        path = Path(output_path)
-        fig.savefig(path, dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        return str(path)
 
     def get_weights(self) -> list[tuple[Array, Array]]:
         return (

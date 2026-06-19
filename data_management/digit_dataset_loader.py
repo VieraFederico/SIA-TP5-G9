@@ -1,6 +1,5 @@
 import ast
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -19,15 +18,9 @@ def get_image(row: pd.Series, size: tuple[int, int] = (28, 28)) -> np.ndarray:
     return row["image"].reshape(size)
 
 
-def plot_sample(row: pd.Series) -> None:
-    fig, ax = plt.subplots(figsize=(3, 3))
-    ax.imshow(get_image(row), cmap="gray", vmin=0, vmax=1)
-    ax.set_title(f"Label: {int(row['label'])}", fontsize=13)
-    ax.axis("off")
-    plt.tight_layout()
-    plt.show()
-
-
 if __name__ == "__main__":
+    # Import local: rompe el ciclo graphs.image -> este módulo (get_image).
+    from graphs.image import plot_sample
+
     df = load_dataset("digits_test.csv")
     plot_sample(df.iloc[0])

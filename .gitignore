@@ -4,7 +4,7 @@
 venv/
 __pycache__
 *.pyc
-
+*.html
 # Salidas generadas por las corridas
 output/
 *.npz
