@@ -49,6 +49,70 @@ def plot_latent_points(
     return save_dark(fig, output_path)
 
 
+def plot_latent_with_generated(
+        positions: Array,
+        generated_samples: Array,
+        labels: list[str] | None = None,
+        output_path: str = "latent_space_with_generated.png",
+        title: str = "2D latent space with generated samples",
+        subtitle: str | None = None,
+) -> str:
+    """
+    Espacio latente del AE con puntos de entrenamiento + puntos generados.
+
+    Args:
+        positions: Array of shape (n_patterns, 2) - training data latent positions
+        generated_samples: Array of shape (n_generated, 2) - sampled latent points
+        labels: Optional labels for training points
+        output_path: Where to save the PNG
+        title: Plot title
+        subtitle: Optional subtitle with hyperparameters
+
+    Returns:
+        Path to saved figure
+    """
+    if positions.shape[1] != 2:
+        raise ValueError(f"Expected 2D latent space, got shape {positions.shape}")
+
+    fig, ax = dark_figure(figsize=(9, 7))
+
+    # Plot training data points in blue
+    ax.scatter(
+        positions[:, 0],
+        positions[:, 1],
+        color=BLUE,
+        s=60,
+        alpha=0.7,
+        label="Training data",
+        zorder=2,
+    )
+    _annotate(ax, labels, positions)
+
+    # Plot generated samples in orange/red with markers
+    ax.scatter(
+        generated_samples[:, 0],
+        generated_samples[:, 1],
+        color=ORANGE,
+        s=100,
+        marker="*",
+        alpha=0.9,
+        label="Generated samples",
+        edgecolors=RED,
+        linewidths=1.5,
+        zorder=3,
+    )
+
+    ax.set_title(title)
+    ax.set_xlabel("Latent dimension 1")
+    ax.set_ylabel("Latent dimension 2")
+    dark_grid(ax)
+    dark_legend(ax, ["Training data", "Generated samples"])
+    add_subtitle(fig, subtitle)
+
+    return save_dark(fig, output_path)
+
+
+
 def plot_latent_distributions(
     means: Array,
     standard_deviations: Array,

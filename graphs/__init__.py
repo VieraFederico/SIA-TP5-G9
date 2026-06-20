@@ -18,7 +18,7 @@ API pública:
 import matplotlib
 matplotlib.use("Agg")
 
-from graphs.latent import plot_latent_distributions, plot_latent_points
+from graphs.latent import plot_latent_distributions, plot_latent_points, plot_latent_with_generated
 from graphs.image import plot_sample
 from font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
 
@@ -27,4 +27,5 @@ __all__ = [
     "plot_latent_distributions",
     "plot_sample",
     "visualize_font",
+    "plot_latent_with_generated",
 ]
