@@ -10,7 +10,7 @@ Usage:
 """
 import argparse
 from pathlib import Path
-
+from font import load_fonts
 import numpy as np
 
 from ae import build_ae_model
@@ -24,32 +24,30 @@ def generate_samples(
     num_samples: int = 5,
     latent_dim: int = 2,
     seed: int | None = None,
+    sampling_method: str = "latent_bounds",
+    latent_bounds: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Sample random points from latent space and decode them.
-
-    Args:
-        model: Autoencoder instance
-        num_samples: how many patterns to generate
-        latent_dim: dimensionality of latent space (e.g., 2 for tanh bottleneck)
-        seed: optional seed for reproducibility
-
-    Returns:
-        Tuple of (latent_samples, generated_patterns)
-            - latent_samples: Array of shape (num_samples, 2)
-            - generated_patterns: Array of shape (num_samples, 35)
-    """
     if seed is not None:
         np.random.seed(seed)
 
-    # Sample from standard normal in latent space
-    # Using tanh activation, the latent space is roughly [-1, 1]
-    # Standard normal samples work well for exploration
-    latent_samples = np.random.standard_normal((num_samples, latent_dim))
+    if sampling_method == "latent_bounds":
+        if latent_bounds is None:
+            raise ValueError("latent_bounds is required when sampling_method='latent_bounds'")
 
-    # Decode each latent point
+        latent_min, latent_max = latent_bounds
+        latent_samples = np.random.uniform(
+            low=latent_min,
+            high=latent_max,
+            size=(num_samples, latent_dim),
+        )
+
+    elif sampling_method == "normal":
+        latent_samples = np.random.standard_normal((num_samples, latent_dim))
+
+    else:
+        raise ValueError(f"Unknown sampling_method: {sampling_method!r}")
+
     generated = np.array([model.decode(z) for z in latent_samples])
-
     return latent_samples, generated
 
 
@@ -63,6 +61,13 @@ def main(argv=None) -> None:
         required=True,
         help="Path to pre-trained weights (.npz file)",
     )
+    parser.add_argument(
+        "--sampling-method",
+        choices=["latent_bounds", "normal"],
+        default="latent_bounds",
+        help="Random sampling strategy for latent space",
+    )
+
     parser.add_argument(
         "-n",
         "--num-samples",
@@ -113,11 +118,19 @@ def main(argv=None) -> None:
     model = load_weights(model, args.weights)
 
     print(f"\nGenerating {args.num_samples} samples from latent space...")
+    training_data = load_fonts(args.datatype)
+    training_positions = model.get_latent_positions(training_data)
+    latent_min = training_positions.min(axis=0)
+    latent_max = training_positions.max(axis=0)
+
+
     latent_samples, generated = generate_samples(
         model,
         num_samples=args.num_samples,
         latent_dim=args.latent_dim,
         seed=args.seed,
+        sampling_method=args.sampling_method,
+        latent_bounds=(latent_min, latent_max),
     )
 
     print(f"\nVisualizing {args.num_samples} generated patterns:\n")
@@ -134,15 +147,11 @@ def main(argv=None) -> None:
     # Generate plot if requested
     if args.plot:
         print("\nGenerating latent space plot with training data and generated samples...")
-        training_positions = model.get_latent_positions(
-            np.zeros((1, 35))  # Placeholder; we'll need actual training data
-        )
+
         # For this we'd need to reload training data; better approach:
         # pass --plot-path to save the plot directly
         try:
-            from font import load_fonts
-            training_data = load_fonts(args.datatype)
-            training_positions = model.get_latent_positions(training_data)
+
 
             hp = {
                 "generated": args.num_samples,

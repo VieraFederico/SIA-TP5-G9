@@ -166,3 +166,29 @@ Los pesos `.npz` son arrays de NumPy guardados por capa (`layer_0_w`, `layer_0_b
 - El entrenamiento puede tardar varios minutos (hasta ~7500 épocas con convergencia temprana).
 - Con `--load`, se evalúa y grafica sin volver a entrenar.
 - El notebook `fonts.ipynb` es exploratorio; la corrida oficial del TP es vía `main.py`.
+
+
+
+
+DESPUES LO HAGO LINDO, PERO PARA QUE SEPAN COMO CORRERLO
+para correr el GENERATE tenes que primero haber guardado los pesos de un modelo pre entrenado AE
+le pasas por parametro --weights path/al/archivo.npz 
+-n  la cantidad de samples que te va a generar
+
+--plot para que haga un grafico, lo guarda en output/ae/latent_space_generated
+
+--sampling-method latent_bounds   es para que el sampling lo haga usando de bordes los puntos del espacio latente que le dio al entrenar,
+sino va a usar una distribucion totalmente random y vas a ver en el grafico q las estrellas te quedan en cualquier parte 
+(lo podes probar si le pasas --sampling-method normal)
+
+--seed para semilla
+
+tonces por ejemplo primero corro
+
+python main.py ae --seed 42 --save --no-noise
+
+dsp corro
+
+(voy a mover el archivo weights.npz a la raiz para que sea mas facil)
+
+python main.py generate --weights weights.npz -n 3 --plot --sampling-method latent_bounds --seed 42
