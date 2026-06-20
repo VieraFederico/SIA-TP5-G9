@@ -28,6 +28,12 @@ def _add_common_args(parser: argparse.ArgumentParser, default_data: str) -> None
         help="corromper la entrada con Salt & Pepper (--no-noise para desactivar)",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="seed opcional para reproducibilidad",
+    )
+    parser.add_argument(
         "--load", dest="load_path", default=None, metavar="PATH",
         help="cargar pesos .npz y saltear el entrenamiento",
     )
@@ -67,6 +73,7 @@ def main(argv=None) -> None:
             load_path=args.load_path,
             save=args.save,
             show_viz=args.show_viz,
+            seed=args.seed,
         )
     elif args.command == "vae":
         run_vae(
@@ -74,4 +81,5 @@ def main(argv=None) -> None:
             with_noise=args.noise,
             load_path=args.load_path,
             save=args.save,
+            seed=args.seed,
         )

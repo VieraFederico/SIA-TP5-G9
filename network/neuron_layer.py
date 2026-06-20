@@ -1,3 +1,6 @@
+from random import seed
+from typing import Generator
+
 import numpy as np
 
 from activation.activation import Array, ActivationFunction
@@ -9,11 +12,11 @@ class NeuronLayer:
     Guarda x, h y V durante el forward para usarlos en backprop.
     """
 
-    def __init__(self, n_inputs: int, n_neurons: int, activation: ActivationFunction, weight_initializator=None) -> None:
+    def __init__(self, n_inputs: int, n_neurons: int, activation: ActivationFunction, weight_initializator=None, rand_seed : int | None = None) -> None:
         self.n_inputs = n_inputs
         self.n_neurons = n_neurons
         self.activation = activation
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(rand_seed)
         # self.weights = rng.standard_normal((n_inputs, n_neurons)) * np.sqrt(1.0 / n_inputs) # Xavier -> for tanh
         self.weights = weight_initializator() if weight_initializator is not None else rng.standard_normal((n_inputs, n_neurons)) * np.sqrt(2.0 / n_inputs) # He -> for relu
         self.bias: Array = np.zeros(n_neurons)

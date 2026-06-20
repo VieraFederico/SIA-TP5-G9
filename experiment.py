@@ -39,7 +39,7 @@ EPOCHS = 7500
 BATCH_SIZE = 5
 EPSILON = 1e-3
 TRAINING_MODE = "batch"
-SALT_P = 0.01
+SALT_P = 0.05
 
 # Todas las salidas van a:  output/<modelo>/<tipo>/<hiperparams>/<archivo>
 OUTPUT_ROOT = Path("output")
@@ -120,7 +120,7 @@ def resolve_labels(datatype: str) -> list[str]:
     return [chr(code) if code < 0x7f else "DEL" for code in range(0x60, 0x80)]
 
 
-def make_trainer(architecture: list[int], cost_name: str):
+def make_trainer(architecture: list[int], cost_name: str, seed : int | None = None):
     """Trainer + función de costo, con los hiperparámetros fijos del TP."""
     bce = BinaryCrossEntropyCost()
     adam = AdamOptimizer(learning_rate=LEARNING_RATE)
@@ -130,7 +130,7 @@ def make_trainer(architecture: list[int], cost_name: str):
         metrics=[],
         cfg=ExperimentConfig(
             name="autoencoder_fonts",
-            seed=42,
+            seed=seed,
             data_path="",
             target_column="",
             preprocessing="normalize",

@@ -5,6 +5,8 @@ Sólo arma la topología del VAE (encoder + cabezas μ y logσ² + decoder); el
 entrenamiento, reporte y gráfico los maneja experiment.run_experiment.
 El término KL se suma en el backward del modelo, no en la función de costo.
 """
+import numpy as np
+
 from graphs import plot_latent_distributions
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
@@ -26,24 +28,24 @@ VAE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 2, 8, 16, 20, 25, 30, 35]
 KL_WEIGHT = 0.01
 
 
-def build_vae_model(act: dict) -> VariationalAutoencoder:
+def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencoder:
     """encoder (35->8) + cabezas μ y logσ² (8->2 identity) + decoder (2->35)."""
     encoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=35, n_neurons=30, activation=act["relu"]),
-        NeuronLayer(n_inputs=30, n_neurons=25, activation=act["relu"]),
-        NeuronLayer(n_inputs=25, n_neurons=20, activation=act["relu"]),
-        NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"]),
-        NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"]),
+        NeuronLayer(n_inputs=35, n_neurons=30, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=30, n_neurons=25, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=25, n_neurons=20, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
     ])
     mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
     log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
     decoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=2, n_neurons=8, activation=act["relu"]),
-        NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"]),
-        NeuronLayer(n_inputs=16, n_neurons=20, activation=act["relu"]),
-        NeuronLayer(n_inputs=20, n_neurons=25, activation=act["relu"]),
-        NeuronLayer(n_inputs=25, n_neurons=30, activation=act["relu"]),
-        NeuronLayer(n_inputs=30, n_neurons=35, activation=act["logistic"]),
+        NeuronLayer(n_inputs=2, n_neurons=8, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=16, n_neurons=20, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=20, n_neurons=25, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=25, n_neurons=30, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=30, n_neurons=35, activation=act["logistic"],rand_seed=seed),
     ])
     return VariationalAutoencoder(
         encoder=encoder,
@@ -73,10 +75,13 @@ def run_vae(
     with_noise: bool = True,
     load_path: str | None = None,
     save: bool = False,
+    seed: int | None = None,
 ):
+    if seed is not None:
+        np.random.seed(seed)
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise)
-    model = build_vae_model(act)
+    model = build_vae_model(act,seed)
     trainer, bce = make_trainer(VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence")
 
     hp = {
@@ -86,6 +91,7 @@ def run_vae(
         "epochs": EPOCHS,
         "lr": LEARNING_RATE,
         "kl": KL_WEIGHT,
+        "Seed" : seed
     }
 
     return run_experiment(

@@ -108,13 +108,14 @@ python main.py ae --no-viz
 
 ## Opciones disponibles
 
-| Opción | Subcomando | Descripción |
-|--------|------------|-------------|
-| `--data letters\|emoji` | `ae`, `vae` | Dataset a usar (`letters` por defecto en `ae`, `emoji` en `vae`) |
-| `--noise` / `--no-noise` | `ae`, `vae` | Corromper la entrada con ruido sal y pimienta (activado por defecto) |
-| `--save` | `ae`, `vae` | Guardar pesos en `weights_<data>.npz` al terminar el entrenamiento |
-| `--load PATH` | `ae`, `vae` | Cargar pesos desde un `.npz` y saltear el entrenamiento |
-| `--no-viz` | `ae` | No imprimir reconstrucciones en ASCII |
+| Opción                   | Subcomando   | Descripción |
+|--------------------------|--------------|-------------|
+| `--data letters\|emoji`  | `ae`, `vae`  | Dataset a usar (`letters` por defecto en `ae`, `emoji` en `vae`) |
+| `--noise` / `--no-noise` | `ae`, `vae`  | Corromper la entrada con ruido sal y pimienta (activado por defecto) |
+| `--save`                 | `ae`, `vae`  | Guardar pesos en `weights_<data>.npz` al terminar el entrenamiento |
+| `--load PATH`            | `ae`, `vae`  | Cargar pesos desde un `.npz` y saltear el entrenamiento |
+| `--no-viz`               | `ae`         | No imprimir reconstrucciones en ASCII |
+| `--seed`                 | `ae`, `vae`  | seed opcional para reproducibilidad |
 
 ---
 
