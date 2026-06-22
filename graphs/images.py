@@ -10,12 +10,11 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+from font import PATTERN_SHAPE
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE,
     add_subtitle, dark_figure, dark_grid, save_dark,
 )
-
-PATTERN_SHAPE = (7, 5)   # font.h y emojis: 7 filas x 5 columnas = 35 píxeles
 IMG_KW = dict(cmap="magma", vmin=0.0, vmax=1.0, interpolation="nearest")
 
 

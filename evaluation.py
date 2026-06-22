@@ -12,6 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
+from font import PATTERN_SHAPE
+
 
 def binarize(x, threshold: float = 0.5) -> np.ndarray:
     """Pasa una salida continua a 0/1 con un umbral (0.5 por defecto)."""
@@ -40,7 +42,7 @@ def nearest_pattern_distance(generated, clean, threshold: float = 0.5) -> np.nda
 
 def _row_to_font_string(row) -> str:
     """Un vector de 35 -> string compacto 7x5 de 0/1, filas separadas por '|'."""
-    bits = binarize(np.asarray(row).reshape(7, 5))
+    bits = binarize(np.asarray(row).reshape(PATTERN_SHAPE))
     return "|".join("".join(str(v) for v in r) for r in bits)
 
 

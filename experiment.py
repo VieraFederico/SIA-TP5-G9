@@ -32,6 +32,9 @@ from weights_io import load_weights, save_weights
 # Acá sólo se importan; experiment ya no los deriva ni hace de hub: cada módulo los lee
 # de config directamente.
 
+# Dimensión del cuello de botella latente (2D, requisito del TP para poder graficarlo).
+LATENT_DIM = 2
+
 
 def hyperparams_slug(hp: dict) -> str:
     """Convierte {clave: valor} en un nombre de carpeta estable y seguro."""
@@ -234,7 +237,14 @@ def run_experiment(
         reconstruct=reconstruct,
     )
 
-    # Figuras de presentación: imágenes (no ASCII) sobre lo que ya se calculó.
+    _save_presentation_plots(model_type, hp, plot_title, clean, x_input, reconstructed, history, labels)
+
+    return {"history": history, "reconstructed": reconstructed, "recon_bce": recon_bce}
+
+
+def _save_presentation_plots(model_type, hp, plot_title, clean, x_input, reconstructed, history, labels):
+    """Figuras de presentación (imágenes, no ASCII) sobre lo que el pipeline ya calculó:
+    X vs X', curva de loss y —sólo en denoising— el tríptico limpio/ruidoso/reconstruido."""
     subtitle = hyperparams_subtitle(hp)
     present = lambda name: output_path(model_type, "presentation", hp, name)
 
@@ -258,5 +268,3 @@ def run_experiment(
             title=f"{plot_title}: limpio / ruidoso / reconstruido", subtitle=subtitle,
         )
         print(f"Denoising triptych saved to: {tript_file}")
-
-    return {"history": history, "reconstructed": reconstructed, "recon_bce": recon_bce}

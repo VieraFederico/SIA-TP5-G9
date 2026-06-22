@@ -1,6 +1,12 @@
 import numpy as np
 
 
+# Forma de cada patrón: una grilla de 7x5 = 35 píxeles (letras de font.h y emojis).
+PATTERN_ROWS = 7
+PATTERN_COLS = 5
+PATTERN_SHAPE = (PATTERN_ROWS, PATTERN_COLS)
+PATTERN_SIZE = PATTERN_ROWS * PATTERN_COLS   # 35
+
 FONT_LABELS = ["`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
           "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "DEL"]
 
@@ -92,7 +98,7 @@ def load_fonts(datatype="letters"):
     for font_row in font_data:
         bits = []
         for byte_val in font_row:
-            bits.extend([(byte_val >> (4 - i)) & 1 for i in range(5)])
+            bits.extend([(byte_val >> (PATTERN_COLS - 1 - i)) & 1 for i in range(PATTERN_COLS)])
         patterns.append(np.array(bits, dtype=np.float32))
     return np.array(patterns)
 
@@ -100,6 +106,6 @@ def visualize_font(pattern, char_name=""):
     """Display a single font pattern as ASCII art"""
     print(f"\nFont: {char_name}")
     # Threshold at 0.5 to convert floats to binary
-    pattern_2d = (pattern > 0.5).reshape(7, 5).astype(int)
+    pattern_2d = (pattern > 0.5).reshape(PATTERN_SHAPE).astype(int)
     for row in pattern_2d:
         print(''.join(['█' if bit else ' ' for bit in row]))

@@ -17,6 +17,7 @@ from sampling import set_seed
 
 from config import EPOCHS, KL_WEIGHT, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
 from experiment import (
+    LATENT_DIM,
     load_dataset,
     make_activations,
     make_trainer,
@@ -38,10 +39,10 @@ def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencod
         NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
     ])
-    mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
-    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
+    mean_layer = NeuronLayer(n_inputs=8, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
+    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
     decoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=2, n_neurons=8, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=LATENT_DIM, n_neurons=8, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=16, n_neurons=20, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=20, n_neurons=25, activation=act["relu"],rand_seed=seed),

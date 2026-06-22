@@ -16,6 +16,7 @@ from sampling import set_seed
 
 from config import BATCH_SIZE, EPOCHS, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
 from experiment import (
+    LATENT_DIM,
     load_dataset,
     make_activations,
     make_trainer,
@@ -26,7 +27,7 @@ from experiment import (
 # Anchos del encoder, de la entrada (35) a la capa que alimenta el bottleneck.
 # El decoder los espeja; AE_ARCHITECTURE es la lista completa (para el log).
 AE_ENCODER_WIDTHS = [35, 30, 25, 20, 16, 8, 4]
-AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [2] + AE_ENCODER_WIDTHS[::-1]
+AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [LATENT_DIM] + AE_ENCODER_WIDTHS[::-1]
 
 
 def build_ae_model(act: dict, seed: int | None = None,
@@ -49,11 +50,11 @@ def build_ae_model(act: dict, seed: int | None = None,
     ])
 
     latent_space = MultilayerPerceptron(layers=[
-        NeuronLayer(encoder_widths[-1], 2, act["tanh"],
+        NeuronLayer(encoder_widths[-1], LATENT_DIM, act["tanh"],
                     init_scheme=init_scheme, rand_seed=seed),  # bottleneck 2D
     ])
 
-    widths = [2] + encoder_widths[::-1]  # 2 -> ... -> 35
+    widths = [LATENT_DIM] + encoder_widths[::-1]  # 2 -> ... -> 35
     decoder = MultilayerPerceptron(layers=[
         NeuronLayer(
             widths[i], widths[i + 1],
