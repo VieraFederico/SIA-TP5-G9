@@ -7,6 +7,9 @@ porque el enunciado pide "error máximo de 1 píxel incorrecto".
 
 Solo depende de numpy, así que corre sin importar el lío de imports src./no-src.
 """
+import csv
+from pathlib import Path
+
 import numpy as np
 
 
@@ -33,6 +36,39 @@ def nearest_pattern_distance(generated, clean, threshold: float = 0.5) -> np.nda
         int((clean_bin != binarize(g, threshold)).sum(axis=1).min())
         for g in np.atleast_2d(generated)
     ])
+
+
+def _row_to_font_string(row) -> str:
+    """Un vector de 35 -> string compacto 7x5 de 0/1, filas separadas por '|'."""
+    bits = binarize(np.asarray(row).reshape(7, 5))
+    return "|".join("".join(str(v) for v in r) for r in bits)
+
+
+def _similarity_percentage(original_row, reconstructed_row) -> float:
+    """Porcentaje de píxeles iguales entre original y reconstrucción (binarizados)."""
+    o = binarize(original_row).reshape(-1)
+    r = binarize(reconstructed_row).reshape(-1)
+    return float((o == r).mean() * 100.0)
+
+
+def write_reconstruction_csv(clean, reconstructed, output_dir: str = "output") -> str:
+    """CSV con: representación original, reconstruida y % de similitud por patrón."""
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / "ae_reconstruction_similarity.csv"
+
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["original_letter", "reconstructed_letter", "similarity_percentage"])
+        for i in range(len(clean)):
+            writer.writerow([
+                _row_to_font_string(clean[i]),
+                _row_to_font_string(reconstructed[i]),
+                f"{_similarity_percentage(clean[i], reconstructed[i]):.2f}",
+            ])
+
+    print(f"Reconstruction CSV written to: {csv_path}")
+    return str(csv_path)
 
 
 def pixel_error_counts(model, X_target, X_input=None, reconstruct=None,

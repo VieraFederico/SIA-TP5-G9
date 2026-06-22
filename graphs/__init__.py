@@ -29,6 +29,7 @@ from graphs.images import (
     plot_generated, plot_loss_curve, plot_reconstructions, plot_triptych,
 )
 from graphs.studies import bar_study, overlaid_curves
+from graphs.samples import visualize_samples
 from font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
 
 __all__ = [
@@ -43,5 +44,6 @@ __all__ = [
     "plot_loss_curve",
     "bar_study",
     "overlaid_curves",
+    "visualize_samples",
     "visualize_font",
 ]

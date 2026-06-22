@@ -7,9 +7,9 @@ El término KL se suma en el backward del modelo, no en la función de costo.
 """
 import numpy as np
 
-from ae import _visualize_samples, _write_reconstruction_csv
+from evaluation import write_reconstruction_csv
 from font import EMOJI_LABELS
-from graphs import plot_latent_distributions
+from graphs import plot_latent_distributions, visualize_samples
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
 from network.variational_autoencoder import VariationalAutoencoder
@@ -125,6 +125,6 @@ def run_vae(
 
 
 
-    _visualize_samples(clean, x_input, result["reconstructed"], with_noise,EMOJI_LABELS)
-    _write_reconstruction_csv(clean, result["reconstructed"], output_dir=str(OUTPUT_ROOT / "vae"))
+    visualize_samples(clean, x_input, result["reconstructed"], with_noise, EMOJI_LABELS)
+    write_reconstruction_csv(clean, result["reconstructed"], output_dir=str(OUTPUT_ROOT / "vae"))
     return result
