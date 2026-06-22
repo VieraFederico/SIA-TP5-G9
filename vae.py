@@ -15,13 +15,8 @@ from network.neuron_layer import NeuronLayer
 from network.variational_autoencoder import VariationalAutoencoder
 from sampling import set_seed
 
+from config import EPOCHS, KL_WEIGHT, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
 from experiment import (
-    EPOCHS,
-    KL_WEIGHT,
-    LEARNING_RATE,
-    OUTPUT_ROOT,
-    SALT_P,
-    SEED,
     load_dataset,
     make_activations,
     make_trainer,
@@ -29,7 +24,7 @@ from experiment import (
     run_experiment,
 )
 
-# Tamaños por capa (sólo metadata para el log de ExperimentConfig).
+# Tamaños por capa (sólo referencia para el log).
 # KL_WEIGHT (β del VAE) ahora sale de config.json vía experiment.
 VAE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 2, 8, 16, 20, 25, 30, 35]
 

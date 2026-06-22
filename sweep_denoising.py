@@ -18,10 +18,8 @@ import numpy as np
 from ae import build_ae_model, AE_ARCHITECTURE
 from evaluation import pixel_errors_per_pattern
 from sampling import set_seed
-from experiment import (
-    ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    make_activations, study_subtitle, train_once,
-)
+from config import ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE
+from experiment import make_activations, study_subtitle, train_once
 from font import load_fonts
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE, RED,

@@ -1,48 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 import json
-
-
-@dataclass
-class ExperimentConfig:
-    # Identificación
-    name: str
-    seed: int
-
-    # Datos
-    data_path: str
-    target_column: str
-
-    preprocessing: str                        # "normalize" | "standardize" | "one_hot"
-    split_train: float
-    split_val: float
-    split_test: float
-
-    # Red
-    activation: str                           # "step" | "identity" | "tanh" | "logistic" | "relu"
-    beta: float                               # parámetro β para tanh y logistic
-    architecture: list[int]                   # neuronas por capa, ej: [784, 64, 10]
-
-    # Entrenamiento
-    cost_function: str                        # "mse" | "binary_cross_entropy" | "categorical_cross_entropy"
-    optimizer: str                            # "gradient_descent" | "momentum" | "adam"
-    eta: float                                # tasa de aprendizaje η
-    training_mode: str                        # "online" | "batch" | "minibatch"
-    epochs: int                               # máximo de épocas
-    epsilon: float                            # umbral de convergencia E < ε
-
-    # Parámetros opcionales de optimizadores
-    momentum_beta: float = 0.9
-    adam_beta1: float = 0.9
-    adam_beta2: float = 0.999
-    batch_size: int = 32
-
-    # Métricas a evaluar al final
-    metrics: list[str] = field(default_factory=lambda: ["accuracy"])
-
-    # Opcional lista de columnas a ignorar en el dataset (ej: ID, timestamp)
-    columns_to_ignore: list[str] = field(default_factory=list)
-
 
 
 @dataclass
@@ -81,3 +39,21 @@ def save_config(cfg: Config, path: Path | str = DEFAULT_CONFIG_PATH) -> None:
     import dataclasses
     with open(path, "w") as f:
         json.dump(dataclasses.asdict(cfg), f, indent=2)
+
+
+# Singleton cargado una vez al importar: ÚNICA fuente de los hiperparámetros del TP.
+# Los módulos leen estas constantes desde acá (config), no rebotando por experiment.
+# El CLI puede overridearlas por flag.
+CFG = load_config()
+
+LEARNING_RATE = CFG.learning_rate
+EPOCHS = CFG.epochs
+BATCH_SIZE = CFG.batch_size          # sólo afecta el modo "minibatch"
+EPSILON = CFG.epsilon                # umbral de corte por convergencia (no es el ε de Adam)
+TRAINING_MODE = CFG.training_mode
+SALT_P = CFG.salt_p
+KL_WEIGHT = CFG.kl_weight            # β del VAE
+ADAM_BETA1 = CFG.adam_beta1
+ADAM_BETA2 = CFG.adam_beta2
+SEED = CFG.seed                      # seed por defecto; --seed la overridea
+OUTPUT_ROOT = Path(CFG.output_root)  # raíz de las salidas: output/<modelo>/...

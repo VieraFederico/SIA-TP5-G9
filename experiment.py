@@ -7,7 +7,7 @@ entrenar/cargar pesos, el reporte de error y el gráfico del espacio latente.
 
 Los módulos ae.py y vae.py sólo arman su topología y delegan en run_experiment.
 """
-from pathlib import Path
+import dataclasses
 
 import numpy as np
 
@@ -15,7 +15,10 @@ from activation.identity import IdentityActivation
 from activation.logistic import LogisticActivation
 from activation.relu import ReLUActivation
 from activation.tanh import TanhActivation
-from config import ExperimentConfig, load_config
+from config import (
+    CFG, ADAM_BETA1, ADAM_BETA2, BATCH_SIZE, EPOCHS, EPSILON,
+    LEARNING_RATE, OUTPUT_ROOT, SALT_P, TRAINING_MODE,
+)
 from cost.binary_cross_entropy import BinaryCrossEntropyCost
 from evaluation import pixel_error_report
 from font import load_fonts, EMOJI_LABEL_NAMES
@@ -25,26 +28,9 @@ from optimizer.adam import AdamOptimizer
 from trainer import Trainer
 from weights_io import load_weights, save_weights
 
-# Nombres de los 32 emojis (mismo orden que EMOJI_FONTS_DATA en font.py).
-
-
-# Hiperparámetros de entrenamiento: ÚNICA fuente de verdad = config.json
-# (auditoría §4-I). Se cargan una vez al importar; ae.py / vae.py / sweeps los
-# re-exportan desde acá. El CLI puede overridearlos por flag.
-_CFG = load_config()
-LEARNING_RATE = _CFG.learning_rate
-EPOCHS = _CFG.epochs
-BATCH_SIZE = _CFG.batch_size          # sólo afecta el modo "minibatch"
-EPSILON = _CFG.epsilon
-TRAINING_MODE = _CFG.training_mode
-SALT_P = _CFG.salt_p
-KL_WEIGHT = _CFG.kl_weight            # β del VAE (lo consume vae.py)
-ADAM_BETA1 = _CFG.adam_beta1
-ADAM_BETA2 = _CFG.adam_beta2
-SEED = _CFG.seed                      # seed por defecto; el flag --seed lo overridea
-
-# Todas las salidas van a:  output/<modelo>/<tipo>/<hiperparams>/<archivo>
-OUTPUT_ROOT = Path(_CFG.output_root)
+# Los hiperparámetros del TP son una única fuente de verdad en config.py (config.json).
+# Acá sólo se importan; experiment ya no los deriva ni hace de hub: cada módulo los lee
+# de config directamente.
 
 
 def hyperparams_slug(hp: dict) -> str:
@@ -148,31 +134,14 @@ def make_trainer(architecture: list[int], cost_name: str, seed: int | None = Non
     bce = BinaryCrossEntropyCost()
     if optimizer is None:
         optimizer = AdamOptimizer(learning_rate=LEARNING_RATE, beta1=ADAM_BETA1, beta2=ADAM_BETA2)
-    trainer = Trainer(
-        cost_fn=bce,
-        optimizer=optimizer,
-        metrics=[],
-        cfg=ExperimentConfig(
-            name="autoencoder_fonts",
-            seed=seed,
-            data_path="",
-            target_column="",
-            preprocessing="normalize",
-            split_train=1.0,
-            split_val=0.0,
-            split_test=0.0,
-            activation="relu",
-            beta=1.0,
-            architecture=architecture,
-            cost_function=cost_name,
-            optimizer="adam",
-            eta=LEARNING_RATE,   # antes 0.01 (inerte/contradictorio, §4-I); ahora = learning_rate real
-            training_mode=TRAINING_MODE if training_mode is None else training_mode,
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS if epochs is None else epochs,
-            epsilon=EPSILON,
-        ),
+    # Partimos del CFG global y sólo pisamos lo que el estudio quiera overridear.
+    cfg = dataclasses.replace(
+        CFG,
+        seed=seed,
+        epochs=CFG.epochs if epochs is None else epochs,
+        training_mode=CFG.training_mode if training_mode is None else training_mode,
     )
+    trainer = Trainer(cost_fn=bce, optimizer=optimizer, metrics=[], cfg=cfg)
     return trainer, bce
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 from activation.activation import Array
-from config import ExperimentConfig
+from config import Config
 from cost.cost import CostFunction
 from metric.metric import Metric
 from network.model import Model
@@ -11,7 +11,7 @@ from optimizer.optimizer import Optimizer
 class Trainer:
     """Loop de entrenamiento genérico. No sabe nada de ejercicios ni de CSVs."""
 
-    def __init__(self, cost_fn: CostFunction, optimizer: Optimizer, metrics: list[Metric], cfg: ExperimentConfig, regularization=False, patience=50) -> None:
+    def __init__(self, cost_fn: CostFunction, optimizer: Optimizer, metrics: list[Metric], cfg: Config, regularization=False, patience=50) -> None:
         self.cost_fn = cost_fn
         self.optimizer = optimizer
         self.metrics = metrics

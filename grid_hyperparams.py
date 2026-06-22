@@ -28,10 +28,8 @@ import numpy as np
 from ae import AE_ARCHITECTURE, build_ae_model
 from evaluation import pixel_error_counts
 from sampling import set_seed
-from experiment import (
-    ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    hyperparams_slug, make_activations, study_subtitle, train_once,
-)
+from config import ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE
+from experiment import hyperparams_slug, make_activations, study_subtitle, train_once
 from font import load_fonts
 from graphs.studies import bar_study
 from optimizer.adam import AdamOptimizer

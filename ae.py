@@ -14,13 +14,8 @@ from network.neuron_layer import NeuronLayer
 from noise.salt_n_pepper import SaltNPepperNoise
 from sampling import set_seed
 
+from config import BATCH_SIZE, EPOCHS, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
 from experiment import (
-    BATCH_SIZE,
-    EPOCHS,
-    LEARNING_RATE,
-    OUTPUT_ROOT,
-    SALT_P,
-    SEED,
     load_dataset,
     make_activations,
     make_trainer,

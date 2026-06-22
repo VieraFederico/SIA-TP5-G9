@@ -21,10 +21,8 @@ import numpy as np
 
 from evaluation import nearest_pattern_distance, pixel_errors_per_pattern
 from sampling import set_seed
-from experiment import (
-    ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    make_activations, study_subtitle, train_once,
-)
+from config import ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE
+from experiment import make_activations, study_subtitle, train_once
 from font import load_fonts
 from graphs import plot_latent_clouds_generated
 from graphs.style import ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark

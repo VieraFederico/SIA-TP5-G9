@@ -21,12 +21,8 @@ import numpy as np
 from graphs.latent import plot_latent_distributions_with_generated
 from vae import build_vae_model
 from font import load_fonts
-from experiment import (
-    make_activations,
-    resolve_labels,
-    output_path,
-    SEED,
-)
+from config import SEED
+from experiment import make_activations, resolve_labels, output_path
 from graphs import visualize_font, plot_generated
 from sampling import latent_bounds, sample_prior, set_seed
 from weights_io import load_weights
