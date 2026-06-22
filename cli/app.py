@@ -16,6 +16,7 @@ Ejemplos:
     python main.py study kl --seeds 3
 """
 import argparse
+import sys
 
 from ae import run_ae
 from vae import run_vae
@@ -106,6 +107,15 @@ def _run_study(kind: str, rest: list[str]) -> None:
 
 
 def main(argv=None) -> None:
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # Sin argumentos → menú interactivo (la TUI arma los flags y vuelve a entrar acá).
+    if not argv:
+        from cli.tui import run_tui
+        run_tui()
+        return
+
     args = build_parser().parse_args(argv)
 
     if args.command == "ae":

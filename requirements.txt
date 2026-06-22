@@ -1,3 +1,4 @@
 numpy
 pandas
 matplotlib
+questionary==2.1.1
