@@ -82,6 +82,19 @@ def hyperparams_subtitle(hp: dict) -> str:
     return "  ·  ".join(parts)
 
 
+def study_subtitle(base: dict, hp: dict, varied: str | None = None) -> str:
+    """Pie de figura de un estudio con TODOS los hiperparámetros, no sólo el que se barre.
+
+    base va primero (data, seeds, épocas); hp es el resto. Si varied coincide con una clave
+    de hp, esa se muestra como '(barrido)'. Así dos figuras del mismo estudio se comparan
+    sabiendo qué quedó fijo y qué se movió.
+    """
+    parts = [f"{k}={v}" for k, v in base.items()]
+    for key, value in hp.items():
+        parts.append(f"{key}=" + ("(barrido)" if key == varied else str(value)))
+    return "  ·  ".join(parts)
+
+
 def output_path(model_type: str, kind: str, hp: dict, filename: str) -> str:
     """Arma output/<model_type>/<kind>/<slug>/<filename> y crea las carpetas."""
     directory = OUTPUT_ROOT / model_type / kind / hyperparams_slug(hp)

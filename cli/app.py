@@ -1,16 +1,19 @@
 """
 cli/app.py — Interfaz de línea de comandos del TP5.
 
-Un único entry point con dos subcomandos:
+Un único entry point con tres subcomandos:
 
-    python main.py ae  [--data letters|emoji] [--noise/--no-noise] [--load P] [--save] [--no-viz]
-    python main.py vae [--data emoji|letters]  [--noise/--no-noise] [--load P] [--save]
+    python main.py ae    [--data letters|emoji] [--noise/--no-noise] [--load P] [--save] [--no-viz]
+    python main.py vae   [--data emoji|letters]  [--noise/--no-noise] [--load P] [--save] [--kl W]
+    python main.py study {architecture|hyperparams|denoising|kl} [flags del estudio]
 
 Ejemplos:
     python main.py ae                      # autoencoder sobre letras, con ruido (DAE)
     python main.py ae --data letters --no-noise --save
     python main.py ae --load weights_letters.npz   # sin reentrenar
     python main.py vae --data emoji --save
+    python main.py study architecture --epochs 300 --seeds 2
+    python main.py study kl --seeds 3
 """
 import argparse
 
@@ -72,7 +75,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="peso del término KL (β-VAE); default: vae.KL_WEIGHT. kl=0 → solo reconstrucción",
     )
 
+    # Estudios comparativos. El CLI sólo elige cuál correr; los flags propios de cada
+    # estudio (--epochs, --seeds, --axis, ...) se pasan tal cual al script.
+    study = subparsers.add_parser("study", help="estudios comparativos / grid search")
+    study.add_argument(
+        "kind", choices=["architecture", "hyperparams", "denoising", "kl"],
+        help="qué estudio correr",
+    )
+    study.add_argument(
+        "rest", nargs=argparse.REMAINDER,
+        help="flags del estudio (ej: --epochs 300 --seeds 2). Probá 'study architecture --help'.",
+    )
+
     return parser
+
+
+# Cada estudio es un script con su propio main(argv); el CLI sólo lo dispatcha.
+_STUDIES = {
+    "architecture": "grid_architecture",
+    "hyperparams": "grid_hyperparams",
+    "denoising": "sweep_denoising",
+    "kl": "sweep_kl",
+}
+
+
+def _run_study(kind: str, rest: list[str]) -> None:
+    import importlib
+    module = importlib.import_module(_STUDIES[kind])
+    module.main(rest)
 
 
 def main(argv=None) -> None:
@@ -98,3 +128,5 @@ def main(argv=None) -> None:
             save=args.save,
             seed=args.seed,
         )
+    elif args.command == "study":
+        _run_study(args.kind, args.rest)

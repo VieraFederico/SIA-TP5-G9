@@ -10,6 +10,29 @@ Solo depende de numpy, así que corre sin importar el lío de imports src./no-sr
 import numpy as np
 
 
+def pixel_error_counts(model, X_target, X_input=None, reconstruct=None,
+                       threshold: float = 0.5, max_errors_ok: int = 1):
+    """Versión silenciosa de pixel_error_report para los barridos (corremos decenas de
+    modelos y no queremos el detalle por carácter en consola). Mismo criterio: binariza
+    a 0.5 y cuenta píxeles distintos por patrón.
+
+    Devuelve (cuántos pasan <= max_errors_ok, peor caso, promedio) en píxeles.
+    """
+    if X_input is None:
+        X_input = X_target
+    if reconstruct is None:
+        reconstruct = model.forward
+
+    errors = np.array([
+        int(np.sum(
+            (np.asarray(X_target[i]).reshape(-1) > threshold).astype(int)
+            != (np.asarray(reconstruct(X_input[i])).reshape(-1) > threshold).astype(int)
+        ))
+        for i in range(len(X_target))
+    ])
+    return int((errors <= max_errors_ok).sum()), int(errors.max()), float(errors.mean())
+
+
 def pixel_error_report(
     model,
     X_target,

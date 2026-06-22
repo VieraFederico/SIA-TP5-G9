@@ -16,7 +16,10 @@ from pathlib import Path
 import numpy as np
 
 from ae import build_ae_model, AE_ARCHITECTURE
-from experiment import EPOCHS, make_activations, make_trainer
+from experiment import (
+    ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
+    make_activations, make_trainer, study_subtitle,
+)
 from font import load_fonts
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE, RED,
@@ -65,10 +68,23 @@ def eval_curve(model, clean, seed, n_real=5):
     return curve
 
 
+def curves_over_seeds(salt, base_seed, n_seeds, epochs, clean, realizations):
+    """Entrena n_seeds modelos para un nivel y devuelve la matriz (n_seeds, len(TEST_GRID))
+    de curvas error-vs-ruido, para después graficar media ± desvío entre seeds."""
+    rows = []
+    for k in range(n_seeds):
+        seed = base_seed + k
+        model = train_model(salt, seed, epochs, clean)
+        rows.append(eval_curve(model, clean, seed, realizations))
+    return np.array(rows)   # (n_seeds, len(TEST_GRID))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Barrido de ruido del DAE.")
     parser.add_argument("--epochs", type=int, default=EPOCHS, help=f"épocas (default {EPOCHS})")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=42, help="seed base; las demás son base+1, ...")
+    parser.add_argument("--seeds", type=int, default=3,
+                        help="cantidad de seeds por nivel (banda de varianza media ± σ)")
     parser.add_argument("--data", choices=["letters", "emoji"], default="letters")
     parser.add_argument("--realizations", type=int, default=5,
                         help="realizaciones de ruido promediadas por punto")
@@ -76,30 +92,33 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     clean = load_fonts(args.data)
-    curves = {}
+    means, stds = {}, {}
 
     for salt in TRAIN_LEVELS:
         name = "AE básico" if salt is None else f"DAE salt={salt}"
-        print(f"Entrenando {name} ({args.epochs} épocas, seed={args.seed})...")
-        model = train_model(salt, args.seed, args.epochs, clean)
-        curves[salt] = eval_curve(model, clean, args.seed, args.realizations)
+        print(f"Entrenando {name} ({args.seeds} seeds x {args.epochs} épocas, seed base={args.seed})...")
+        mat = curves_over_seeds(salt, args.seed, args.seeds, args.epochs, clean, args.realizations)
+        means[salt] = mat.mean(axis=0)   # media entre seeds
+        stds[salt] = mat.std(axis=0)     # desvío entre seeds (ancho de la banda)
 
-    # Tabla
+    # Tabla (media entre seeds)
     header = "train \\ test | " + " | ".join(f"{p:>5.2f}" for p in TEST_GRID)
     print("\n" + header)
     print("-" * len(header))
     for salt in TRAIN_LEVELS:
         name = "AE básico" if salt is None else f"DAE {salt:>4}"
-        row = " | ".join(f"{v:>5.2f}" for v in curves[salt])
+        row = " | ".join(f"{v:>5.2f}" for v in means[salt])
         print(f"{name:>12} | {row}")
 
-    # Figura
+    # Figura: línea = media entre seeds; banda sombreada = media ± desvío entre seeds
     fig, ax = dark_figure(figsize=(9, 6))
     for salt in TRAIN_LEVELS:
         label = "AE básico (sin ruido)" if salt is None else f"DAE entrenado a salt={salt}"
         style = "--" if salt is None else "-"
-        ax.plot(TEST_GRID, curves[salt], marker="o", linestyle=style,
+        ax.plot(TEST_GRID, means[salt], marker="o", linestyle=style,
                 color=COLORS[salt], label=label)
+        ax.fill_between(TEST_GRID, means[salt] - stds[salt], means[salt] + stds[salt],
+                        color=COLORS[salt], alpha=0.18, linewidth=0)   # banda de varianza
 
     ax.set_title("Denoising: error de reconstrucción vs ruido de prueba")
     ax.set_xlabel("Nivel de ruido en la prueba (salt-and-pepper)")
@@ -108,8 +127,15 @@ def main(argv=None):
     leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM)
     for t in leg.get_texts():
         t.set_color(FG)
-    add_subtitle(fig, f"data={args.data}  ·  seed={args.seed}  ·  epochs={args.epochs}  "
-                      f"·  {args.realizations} realizaciones/punto  ·  ruido re-sampleado por época")
+    # las curvas (legend) son los niveles de ruido de entrenamiento; el resto de los HP
+    # es igual para todos los modelos y va en el pie para poder comparar.
+    add_subtitle(fig, study_subtitle(
+        {"data": args.data, "seeds": args.seeds, "épocas": args.epochs},
+        {"arch": "default", "lr": LEARNING_RATE, "mode": TRAINING_MODE, "init": "he",
+         "bottleneck": 2, "opt": f"adam({ADAM_BETA1},{ADAM_BETA2})", "ε": EPSILON,
+         "realizaciones/punto": args.realizations, "ruido": "re-sampleado/época",
+         "banda": "media ± σ"},
+    ))
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     print(f"\nFigura guardada en: {save_dark(fig, args.output)}")
 

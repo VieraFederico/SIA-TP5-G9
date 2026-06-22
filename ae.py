@@ -30,32 +30,43 @@ from experiment import (
     run_experiment,
 )
 
-# Tamaños por capa (sólo metadata para el log de ExperimentConfig).
-AE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 4, 2, 4, 8, 16, 20, 25, 30, 35]
+# Anchos del encoder, de la entrada (35) a la capa que alimenta el bottleneck.
+# El decoder los espeja; AE_ARCHITECTURE es la lista completa (para el log).
+AE_ENCODER_WIDTHS = [35, 30, 25, 20, 16, 8, 4]
+AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [2] + AE_ENCODER_WIDTHS[::-1]
 
 
-def build_ae_model(act: dict, seed : int | None = None) -> Autoencoder:
-    """encoder (35->4) + cuello de botella (4->2 tanh) + decoder (2->35)."""
+def build_ae_model(act: dict, seed: int | None = None,
+                   encoder_widths: list[int] = AE_ENCODER_WIDTHS,
+                   hidden_act: str = "relu") -> Autoencoder:
+    """Autoencoder con cuello de botella 2D.
+
+    encoder_widths va de la entrada (35) a la capa que alimenta el bottleneck; el
+    decoder espeja esos anchos y cierra con una sigmoide. Por defecto arma la
+    topología del TP (35-30-25-20-16-8-4-2 y vuelta). El estudio de arquitectura
+    reusa esta misma función con otros anchos.
+    """
+    hidden = act[hidden_act]
+
     encoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=35, n_neurons=30, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=30, n_neurons=25, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=25, n_neurons=20, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=8, n_neurons=4, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(encoder_widths[i], encoder_widths[i + 1], hidden, rand_seed=seed)
+        for i in range(len(encoder_widths) - 1)
     ])
+
     latent_space = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=4, n_neurons=2, activation=act["tanh"],rand_seed=seed),  # bottleneck
+        NeuronLayer(encoder_widths[-1], 2, act["tanh"], rand_seed=seed),  # bottleneck 2D
     ])
+
+    widths = [2] + encoder_widths[::-1]  # 2 -> ... -> 35
     decoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=2, n_neurons=4, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=4, n_neurons=8, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=16, n_neurons=20, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=20, n_neurons=25, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=25, n_neurons=30, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=30, n_neurons=35, activation=act["logistic"],rand_seed=seed),
+        NeuronLayer(
+            widths[i], widths[i + 1],
+            act["logistic"] if i == len(widths) - 2 else hidden,  # sigmoide sólo en la salida
+            rand_seed=seed,
+        )
+        for i in range(len(widths) - 1)
     ])
+
     return Autoencoder(encoder=encoder, latent_space=latent_space, decoder=decoder)
 
 
