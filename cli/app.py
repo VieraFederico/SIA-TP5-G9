@@ -53,6 +53,14 @@ def build_parser() -> argparse.ArgumentParser:
     ae = subparsers.add_parser("ae", help="autoencoder / denoising AE sobre font.h")
     _add_common_args(ae, default_data="letters")
     ae.add_argument(
+        "--salt", type=float, default=None, metavar="P",
+        help="probabilidad de ruido slt-n-pepper (default: experiment.SALT_P)",
+    )
+    ae.add_argument(
+        "--resample", action=argparse.BooleanOptionalAction, default=True,
+        help="re-samplear el ruido en cada época (--no-resample para ruido fijo)",
+    )
+    ae.add_argument(
         "--no-viz", dest="show_viz", action="store_false", default=True,
         help="no mostrar las reconstrucciones en ASCII",
     )
@@ -70,6 +78,8 @@ def main(argv=None) -> None:
         run_ae(
             datatype=args.data,
             with_noise=args.noise,
+            salt_p=args.salt,
+            resample_noise=args.resample,
             load_path=args.load_path,
             save=args.save,
             show_viz=args.show_viz,

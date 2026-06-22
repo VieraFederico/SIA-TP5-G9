@@ -164,6 +164,7 @@ def run_experiment(
     load_path: str | None = None,
     save: bool = False,
     extra_report=None,
+    noise_fn=None,
 ):
     """
     Entrena (o carga pesos), imprime el error, grafica el latente y corre el
@@ -194,6 +195,7 @@ def run_experiment(
             zeta_train=target,
             X_val=None,
             zeta_val=None,
+            noise_fn=noise_fn,
         )
         if save:
             save_weights(model, output_path(model_type, "weights", hp, "weights.npz"))

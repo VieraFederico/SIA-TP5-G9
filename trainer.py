@@ -20,8 +20,14 @@ class Trainer:
         self.regularization = regularization
         self.patience = patience
 
-    def fit(self, model: Model, X_train: Array, zeta_train: Array, X_val: Array| None, zeta_val: Array|None) -> dict:
-        """Entrena el modelo y devuelve el historial de errores por época."""
+    def fit(self, model: Model, X_train: Array, zeta_train: Array, X_val: Array| None, zeta_val: Array|None, noise_fn=None) -> dict:
+        """Entrena el modelo y devuelve el historial de errores por época.
+
+        Si noise_fn no es None, se la llama al inicio de cada época para regenerar
+        la entrada (denoising AE con ruido re-sampleado): así la red ve una
+        corrupción distinta de cada patrón en cada época y aprende lo invariante
+        (el patrón limpio) en vez de memorizar una realización puntual del ruido.
+        """
         if self.cfg.training_mode == "online":
             train_fn = self._train_epoch_online
         elif self.cfg.training_mode == "minibatch":
@@ -38,7 +44,8 @@ class Trainer:
         use_val = X_val is not None and zeta_val is not None
 
         for epoch in range(self.cfg.epochs): # ← "for a fixed number of epochs" (Clase 11)
-            train_errors.append(train_fn(model, X_train, zeta_train))
+            X_epoch = noise_fn() if noise_fn is not None else X_train
+            train_errors.append(train_fn(model, X_epoch, zeta_train))
 
             if use_val:
                 val_error = self._evaluate_loss(model, X_val, zeta_val)

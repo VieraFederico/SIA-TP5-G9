@@ -15,6 +15,7 @@ from graphs import plot_latent_points, visualize_font
 from network.autoencoder import Autoencoder
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
+from noise.salt_n_pepper import SaltNPepperNoise
 
 from experiment import (
     BATCH_SIZE,
@@ -146,6 +147,8 @@ def run_ae(
     *,
     datatype: str = "letters",
     with_noise: bool = True,
+    salt_p: float = SALT_P,
+    resample_noise: bool = True,
     load_path: str | None = None,
     save: bool = False,
     show_viz: bool = True,
@@ -154,15 +157,25 @@ def run_ae(
     if seed is not None:
         np.random.seed(seed)
 
+    if salt_p is None:
+        salt_p = SALT_P
+
     act = make_activations()
-    clean, x_input, target = load_dataset(datatype, with_noise)
+    clean, x_input, target = load_dataset(datatype, with_noise, salt_p)
     model = build_ae_model(act, seed)
     trainer, bce = make_trainer(AE_ARCHITECTURE, "binary_cross_entropy")
+
+    # Denoising AE: re-sampleamos el ruido en cada época (corrupción distinta de
+    # cada patrón) para que aprenda a limpiar y no memorice un ruido fijo
+    noise_fn = None
+    if with_noise and resample_noise:
+        noise_fn = lambda: SaltNPepperNoise(salt_p).add_noise(clean.copy())
 
     hp = {
         "data": datatype,
         "noise": with_noise,
-        "salt": SALT_P if with_noise else None,
+        "salt": salt_p if with_noise else None,
+        "resample": resample_noise if with_noise else None,
         "epochs": EPOCHS,
         "lr": LEARNING_RATE,
         "batch": BATCH_SIZE,
@@ -184,6 +197,7 @@ def run_ae(
         reconstruct=model.forward,
         load_path=load_path,
         save=save,
+        noise_fn=noise_fn,
     )
 
     if show_viz:
