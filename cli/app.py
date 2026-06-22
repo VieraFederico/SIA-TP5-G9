@@ -25,8 +25,8 @@ Ejemplos:
 import argparse
 import sys
 
-from ae import run_ae
-from vae import run_vae
+from experiments.ae import run_ae
+from experiments.vae import run_vae
 
 
 def _add_common_args(parser: argparse.ArgumentParser, default_data: str) -> None:
@@ -119,13 +119,13 @@ def build_parser() -> argparse.ArgumentParser:
 # Cada subcomando que delega es un script con su propio main(argv); el CLI sólo
 # elige el módulo y le pasa los flags crudos. Nada de lógica acá.
 _STUDIES = {
-    "architecture": "grid_architecture",
-    "hyperparams": "grid_hyperparams",
-    "denoising": "sweep_denoising",
-    "kl": "sweep_kl",
+    "architecture": "experiments.grid_architecture",
+    "hyperparams": "experiments.grid_hyperparams",
+    "denoising": "experiments.sweep_denoising",
+    "kl": "experiments.sweep_kl",
 }
-_GENERATORS = {"ae": "generate", "vae": "generate_vae"}
-_PLOTS = {"latent": "plot_latent_combined"}
+_GENERATORS = {"ae": "experiments.generate", "vae": "experiments.generate_vae"}
+_PLOTS = {"latent": "experiments.plot_latent_combined"}
 
 
 def _run_module(module_name: str, rest: list[str]) -> None:

@@ -11,7 +11,7 @@ matplotlib al abrir el menú). Pensado para terminal de fondo oscuro; símbolos 
 """
 import questionary
 
-from config import load_config
+from src.utils.config import load_config
 
 # Paleta (espejo de graphs/style.py).
 BLUE, ORANGE, RED = "#4aa3ff", "#ffb454", "#ff6b6b"

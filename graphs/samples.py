@@ -7,8 +7,8 @@ corta el acople en que vae.py importaba este helper desde ae.py.
 """
 import numpy as np
 
-from evaluation import binarize
-from font import visualize_font
+from src.utils.evaluation import binarize
+from src.data.font import visualize_font
 
 
 def visualize_samples(clean, x_input, reconstructed, with_noise: bool, labels) -> None:

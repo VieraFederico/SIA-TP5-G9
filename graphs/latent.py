@@ -11,7 +11,7 @@ etiquetas (_annotate) se comparte acá entre AE y VAE.
 import numpy as np
 from matplotlib.patches import Ellipse
 
-from activation.activation import Array
+from src.activation.activation import Array
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE, RED,
     add_subtitle, dark_figure, dark_grid, dark_legend, save_dark,

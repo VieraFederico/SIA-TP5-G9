@@ -10,7 +10,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from font import PATTERN_SHAPE
+from src.data.font import PATTERN_SHAPE
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE,
     add_subtitle, dark_figure, dark_grid, save_dark,

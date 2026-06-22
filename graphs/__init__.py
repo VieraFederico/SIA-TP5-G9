@@ -30,7 +30,7 @@ from graphs.images import (
 )
 from graphs.studies import bar_study, overlaid_curves
 from graphs.samples import visualize_samples
-from font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
+from src.data.font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
 
 __all__ = [
     "plot_latent_points",
