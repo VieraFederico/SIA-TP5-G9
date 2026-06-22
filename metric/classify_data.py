@@ -1,5 +1,5 @@
 import numpy as np
-from src.activation.activation import Array
+from activation.activation import Array
 
 
 def classify_data (zeta: Array, output: Array,threshold:float =0.8)->Array:

@@ -1,7 +1,7 @@
 import numpy as np
-from src.activation.activation import Array
-from src.network.model import Model
-from src.metric.classify_data_mlp import classify_data_mlp
+from activation.activation import Array
+from network.model import Model
+from metric.classify_data_mlp import classify_data_mlp
 
 
 def evaluate_multiclass(model: Model, X: Array, y_true: Array) -> tuple[np.ndarray, dict]:

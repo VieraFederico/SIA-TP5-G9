@@ -1,5 +1,5 @@
 import numpy as np
-from src.activation.activation import Array
+from activation.activation import Array
 
 
 def classify_data_mlp (zeta: Array, output: Array)->Array:

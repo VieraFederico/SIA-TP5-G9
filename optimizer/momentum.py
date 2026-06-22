@@ -1,6 +1,6 @@
 import numpy as np
-from src.optimizer.optimizer import Optimizer
-from src.activation.activation import Array
+from optimizer.optimizer import Optimizer
+from activation.activation import Array
 
 
 class MomentumOptimizer(Optimizer):
