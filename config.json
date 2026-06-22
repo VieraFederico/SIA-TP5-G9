@@ -4,7 +4,7 @@
   "training_mode": "batch",
   "batch_size": 5,
   "epsilon": 0.001,
-  "salt_p": 0.25,
+  "salt_p": 0.1,
   "kl_weight": 0.03,
   "adam_beta1": 0.9,
   "adam_beta2": 0.999,

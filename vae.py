@@ -18,6 +18,7 @@ from experiment import (
     EPOCHS,
     KL_WEIGHT,
     LEARNING_RATE,
+    OUTPUT_ROOT,
     SALT_P,
     SEED,
     load_dataset,
@@ -125,5 +126,5 @@ def run_vae(
 
 
     _visualize_samples(clean, x_input, result["reconstructed"], with_noise,EMOJI_LABELS)
-    _write_reconstruction_csv(clean, result["reconstructed"], output_dir="output")
+    _write_reconstruction_csv(clean, result["reconstructed"], output_dir=str(OUTPUT_ROOT / "vae"))
     return result

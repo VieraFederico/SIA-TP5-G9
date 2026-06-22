@@ -9,10 +9,10 @@ Modos de muestreo (--sampling):
 Opcional --grid: si el latente es 2D, barre una malla (z1,z2) sobre el rango ocupado y
 decodifica cada celda. El mosaico se RENDERIZA en la Fase 6; acá sólo se genera y guarda.
 
-Ejemplos:
-    python3 generate_vae.py --weights output/vae/.../weights.npz                 # prior (default)
-    python3 generate_vae.py --weights ... --sampling posterior --scale 1.0       # posterior
-    python3 generate_vae.py --weights ... --grid --grid-n 12                      # malla 2D
+Entrada pública por main.py (este main(argv) es sólo detalle interno):
+    python3 main.py generate vae --weights output/vae/.../weights.npz               # prior (default)
+    python3 main.py generate vae --weights ... --sampling posterior --scale 1.0     # posterior
+    python3 main.py generate vae --weights ... --grid --grid-n 12                    # malla 2D
 """
 import argparse
 from pathlib import Path
@@ -99,7 +99,7 @@ def main(argv=None) -> None:
     )
     parser.add_argument("--weights", required=True, help="ruta a los pesos .npz del VAE entrenado")
     parser.add_argument("--sampling", choices=["prior", "posterior"], default="prior",
-                        help="prior: z~N(0,I) (canónico, DEFAULT); posterior: z~N(μ_i,σ_i·scale)")
+                        help="prior: z~N(0,I) (canónico)  ·  posterior: z~N(μ_i, σ_i)")
     parser.add_argument("-n", "--num-samples", type=int, default=8,
                         help="cantidad de muestras (no aplica a --grid; default 8)")
     parser.add_argument("--samples-per-mean", type=int, default=1,
@@ -110,7 +110,7 @@ def main(argv=None) -> None:
                         help="latente 2D: barre una malla (z1,z2) y decodifica (mosaico → Fase 6)")
     parser.add_argument("--grid-n", type=int, default=12,
                         help="resolución NxN de la malla para --grid (default 12)")
-    parser.add_argument("--datatype", choices=["letters", "emoji"], default="emoji",
+    parser.add_argument("--data", "--datatype", dest="data", choices=["letters", "emoji"], default="emoji",
                         help="dataset (default emoji)")
     parser.add_argument("--seed", type=int, default=None,
                         help="seed; si no se pasa, usa el de config.json (experiment.SEED)")
@@ -132,7 +132,7 @@ def main(argv=None) -> None:
     model = load_weights(model, args.weights)
 
     print("Loading training data...")
-    training_data = load_fonts(args.datatype)
+    training_data = load_fonts(args.data)
     means, stds = model.get_latent_distributions(training_data)
     if means.shape[1] != 2:
         raise ValueError("Expected latent dim 2")
@@ -175,22 +175,22 @@ def main(argv=None) -> None:
     if not args.grid:
         image_file = plot_generated(
             generated, latent_samples, str(output_dir / f"vae_generated_{tag}.png"),
-            title=f"{args.datatype.capitalize()}: muestras generadas (VAE) [{mode_desc}]",
+            title=f"{args.data.capitalize()}: muestras generadas (VAE) [{mode_desc}]",
             subtitle=f"z ~ {mode_desc} · decode → emoji",
         )
         print(f"Generated images saved to: {image_file}")
 
     if args.plot:
         try:
-            hp = {"sampling": tag, "generated": total, "datatype": args.datatype, "seed": seed}
+            hp = {"sampling": tag, "generated": total, "datatype": args.data, "seed": seed}
             plot_file = output_path("vae", "latent_space_generated", hp, "latent_with_generated.png")
             plot_latent_distributions_with_generated(
                 means,
                 stds,
                 latent_samples,
-                labels=resolve_labels(args.datatype),
+                labels=resolve_labels(args.data),
                 output_path=plot_file,
-                title=f"{args.datatype.capitalize()} VAE latente + {total} generados [{mode_desc}]",
+                title=f"{args.data.capitalize()} VAE latente + {total} generados [{mode_desc}]",
                 subtitle=f"distribución de entrenamiento + generados ({mode_desc})",
             )
             print(f"Latent space plot saved to: {plot_file}")

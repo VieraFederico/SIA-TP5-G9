@@ -21,6 +21,7 @@ from experiment import (
     BATCH_SIZE,
     EPOCHS,
     LEARNING_RATE,
+    OUTPUT_ROOT,
     SALT_P,
     SEED,
     load_dataset,
@@ -181,6 +182,9 @@ def run_ae(
     if with_noise and resample_noise:
         noise_fn = lambda: SaltNPepperNoise(salt_p).add_noise(clean.copy())
 
+    # AE sin ruido (1.a) y denoising AE (1.b) caen en carpetas de primer nivel distintas.
+    model_type = "dae" if with_noise else "ae"
+
     hp = {
         "data": datatype,
         "noise": with_noise,
@@ -200,7 +204,7 @@ def run_ae(
         x_input=x_input,
         target=target,
         labels=resolve_labels(datatype),
-        model_type="ae",
+        model_type=model_type,
         hp=hp,
         plot_title=f"{datatype.capitalize()} patterns in 2D latent space",
         plot=_plot_latent,
@@ -214,5 +218,5 @@ def run_ae(
 
         _visualize_samples(clean, x_input, result["reconstructed"], with_noise, FONT_LABELS)
 
-    _write_reconstruction_csv(clean, result["reconstructed"], output_dir="output")
+    _write_reconstruction_csv(clean, result["reconstructed"], output_dir=str(OUTPUT_ROOT / model_type))
     return result

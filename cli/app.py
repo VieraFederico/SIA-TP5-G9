@@ -1,17 +1,24 @@
 """
 cli/app.py — Interfaz de línea de comandos del TP5.
 
-Un único entry point con tres subcomandos:
+Un único entry point con todos los subcomandos. Regla: TODO entra por main.py;
+los scripts sueltos conservan su main(argv) sólo como detalle interno, no como
+interfaz pública.
 
-    python main.py ae    [--data letters|emoji] [--noise/--no-noise] [--load P] [--save] [--no-viz]
-    python main.py vae   [--data emoji|letters]  [--noise/--no-noise] [--load P] [--save] [--kl W]
-    python main.py study {architecture|hyperparams|denoising|kl} [flags del estudio]
+    python main.py ae       [--data letters|emoji] [--noise/--no-noise] [--load P] [--save] [--no-viz]
+    python main.py vae      [--data emoji|letters]  [--noise/--no-noise] [--load P] [--save] [--kl W]
+    python main.py generate {ae|vae}  --weights P [flags del generador]
+    python main.py plot     latent    --weights P [flags del plot]
+    python main.py study    {architecture|hyperparams|denoising|kl} [flags del estudio]
 
 Ejemplos:
     python main.py ae                      # autoencoder sobre letras, con ruido (DAE)
     python main.py ae --data letters --no-noise --save
     python main.py ae --load weights_letters.npz   # sin reentrenar
     python main.py vae --data emoji --save
+    python main.py generate ae  --weights output/ae/.../weights.npz --plot
+    python main.py generate vae --weights output/vae/.../weights.npz
+    python main.py plot latent  --weights output/vae/.../weights.npz
     python main.py study architecture --epochs 300 --seeds 2
     python main.py study kl --seeds 3
 """
@@ -62,7 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ae.add_argument(
         "--resample", action=argparse.BooleanOptionalAction, default=True,
-        help="re-samplear el ruido en cada época (--no-resample para ruido fijo)",
+        help="re-samplear el ruido en cada época (denoising real, default). "
+             "--no-resample = ruido FIJO: la red memoriza una corrupción puntual, no es denoising real",
     )
     ae.add_argument(
         "--no-viz", dest="show_viz", action="store_false", default=True,
@@ -74,6 +82,23 @@ def build_parser() -> argparse.ArgumentParser:
     vae.add_argument(
         "--kl", type=float, default=None, metavar="W",
         help="peso del término KL (β-VAE); default: vae.KL_WEIGHT. kl=0 → solo reconstrucción",
+    )
+
+    # Generación de muestras nuevas. El CLI sólo elige el modelo; los flags propios
+    # (--weights, --sampling, ...) se pasan tal cual al script generador.
+    generate = subparsers.add_parser("generate", help="generar muestras nuevas (AE a.4 / VAE 2.c)")
+    generate.add_argument("kind", choices=["ae", "vae"], help="modelo del que generar")
+    generate.add_argument(
+        "rest", nargs=argparse.REMAINDER,
+        help="flags del generador (ej: --weights P --sampling ...). Probá 'generate ae --help'.",
+    )
+
+    # Visualizaciones de un modelo entrenado (plot del latente con generados).
+    plot = subparsers.add_parser("plot", help="visualizar un modelo entrenado")
+    plot.add_argument("kind", choices=["latent"], help="qué graficar")
+    plot.add_argument(
+        "rest", nargs=argparse.REMAINDER,
+        help="flags del plot (ej: --weights P --sampling ...). Probá 'plot latent --help'.",
     )
 
     # Estudios comparativos. El CLI sólo elige cuál correr; los flags propios de cada
@@ -91,19 +116,21 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# Cada estudio es un script con su propio main(argv); el CLI sólo lo dispatcha.
+# Cada subcomando que delega es un script con su propio main(argv); el CLI sólo
+# elige el módulo y le pasa los flags crudos. Nada de lógica acá.
 _STUDIES = {
     "architecture": "grid_architecture",
     "hyperparams": "grid_hyperparams",
     "denoising": "sweep_denoising",
     "kl": "sweep_kl",
 }
+_GENERATORS = {"ae": "generate", "vae": "generate_vae"}
+_PLOTS = {"latent": "plot_latent_combined"}
 
 
-def _run_study(kind: str, rest: list[str]) -> None:
+def _run_module(module_name: str, rest: list[str]) -> None:
     import importlib
-    module = importlib.import_module(_STUDIES[kind])
-    module.main(rest)
+    importlib.import_module(module_name).main(rest)
 
 
 def main(argv=None) -> None:
@@ -138,5 +165,9 @@ def main(argv=None) -> None:
             save=args.save,
             seed=args.seed,
         )
+    elif args.command == "generate":
+        _run_module(_GENERATORS[args.kind], args.rest)
+    elif args.command == "plot":
+        _run_module(_PLOTS[args.kind], args.rest)
     elif args.command == "study":
-        _run_study(args.kind, args.rest)
+        _run_module(_STUDIES[args.kind], args.rest)

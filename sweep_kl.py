@@ -119,7 +119,7 @@ def main(argv=None):
                         help="seeds por nivel de kl (banda de varianza media ± σ)")
     parser.add_argument("--gen-samples", type=int, default=300)
     parser.add_argument("--cloud-samples", type=int, default=40)
-    parser.add_argument("--output-dir", default="output/vae/kl_sweep")
+    parser.add_argument("--output-dir", default="output/study/kl")
     args = parser.parse_args(argv)
 
     outdir = Path(args.output_dir)

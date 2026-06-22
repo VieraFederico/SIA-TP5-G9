@@ -6,9 +6,9 @@ Dibuja tres capas sobre un VAE ya entrenado:
     medias  (μ, un punto por patrón, etiquetado)
     generados (z ~ N(0,1) o latent_bounds, estrellas)
 
-Uso:
-    python plot_latent_combined.py --weights <ruta.npz>
-    python plot_latent_combined.py --weights <ruta.npz> --output output/vae/combined_kl0.png
+Entrada pública por main.py (este main(argv) es sólo detalle interno):
+    python main.py plot latent --weights <ruta.npz>
+    python main.py plot latent --weights <ruta.npz> --output output/vae/combined_kl0.png
 """
 import argparse
 from pathlib import Path
@@ -30,8 +30,8 @@ def main(argv=None):
     parser.add_argument("--data", default="emoji", choices=["emoji", "letters"])
     parser.add_argument("--n-generated", type=int, default=8)
     parser.add_argument("--cloud-samples", type=int, default=40, help="z por patrón (nubes)")
-    parser.add_argument("--sampling", default="normal", choices=["normal", "latent_bounds"],
-                        help="normal: z~N(0,1) (generación real); latent_bounds: uniforme en el rango ocupado")
+    parser.add_argument("--sampling", default="normal", choices=["normal", "bounds"],
+                        help="normal: z~N(0,1)  ·  bounds: uniforme dentro del rango latente ocupado")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", default=None,
                         help="ruta del .png; por defecto se deriva del nombre de los pesos")
@@ -51,7 +51,7 @@ def main(argv=None):
     # ---- generación ----
     if args.sampling == "normal":
         gen = np.random.standard_normal((args.n_generated, 2))
-    else:  # latent_bounds: uniforme dentro del rango ocupado por las medias
+    else:  # bounds: uniforme dentro del rango ocupado por las medias
         lo, hi = means.min(axis=0), means.max(axis=0)
         gen = np.random.uniform(lo, hi, size=(args.n_generated, 2))
 

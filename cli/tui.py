@@ -105,13 +105,6 @@ def _dispatch_main(argv):
     _confirm_and_run("python3 main.py " + " ".join(argv), lambda: app_main(argv))
 
 
-def _dispatch_script(module_name, argv):
-    """Ejecuta el main(argv) de un script suelto (generate_vae / plot_latent_combined)."""
-    import importlib
-    script = f"python3 {module_name}.py " + " ".join(argv)
-    _confirm_and_run(script, lambda: importlib.import_module(module_name).main(argv))
-
-
 # --- menús por acción -----------------------------------------------------------------
 
 def _menu_ae(cfg, denoising):
@@ -120,7 +113,8 @@ def _menu_ae(cfg, denoising):
 
     if denoising:
         salt = _ask(_text("Nivel de ruido salt:", default=str(cfg.salt_p)))
-        resample = _ask(_confirm("¿Re-samplear el ruido en cada época?", default=True))
+        print(_color("  no-resample = ruido FIJO: la red memoriza una corrupción puntual, no es denoising real", MUTED))
+        resample = _ask(_confirm("¿Re-samplear el ruido en cada época? (recomendado)", default=True))
         argv += ["--noise", "--salt", salt, "--resample" if resample else "--no-resample"]
     else:
         argv += ["--no-noise"]
@@ -149,32 +143,47 @@ def _menu_vae(cfg):
 
 def _menu_generate(cfg):
     what = _ask(_select("¿Qué querés hacer?", choices=[
-        questionary.Choice("Generar muestras del VAE", "generate",
-                           description="z ~ N(0,I) (o posterior) -> decode -> patrones nuevos"),
+        questionary.Choice("Generar muestras del AE", "ae",
+                           description="z del latente -> decode -> letras nuevas (a.4)"),
+        questionary.Choice("Generar muestras del VAE", "vae",
+                           description="z ~ N(0,I) (o posterior) -> decode -> emojis nuevos (2.c)"),
         questionary.Choice("Plot del latente + generados", "plot",
-                           description="nubes q(z|x) + medias + generados sobre un VAE entrenado"),
+                           description="nubes q(z|x) + medias + generados sobre un VAE entrenado (2.b)"),
     ]))
-    weights = _ask(_path("Pesos .npz del VAE entrenado:", default="output/vae/"))
-    seed = _seed_flag(cfg)
 
-    if what == "generate":
+    if what == "ae":
+        weights = _ask(_path("Pesos .npz del AE entrenado:", default="output/ae/"))
+        data = _ask(_select("Dataset:", choices=["letters", "emoji"], default="letters"))
+        sampling = _ask(_select("Muestreo:", choices=[
+            questionary.Choice("normal", description="z ~ N(0,1): generación canónica"),
+            questionary.Choice("bounds", description="uniforme dentro del rango latente ocupado"),
+        ]))
+        argv = ["generate", "ae", "--weights", weights, "--data", data, "--sampling", sampling]
+        if _ask(_confirm("¿Plot del latente con los generados?", default=False)):
+            argv += ["--plot"]
+        _dispatch_main(argv + _seed_flag(cfg))
+
+    elif what == "vae":
+        weights = _ask(_path("Pesos .npz del VAE entrenado:", default="output/vae/"))
         data = _ask(_select("Dataset:", choices=["emoji", "letters"], default="emoji"))
         sampling = _ask(_select("Muestreo:", choices=[
             questionary.Choice("prior", description="z ~ N(0,I): generación canónica desde cero"),
             questionary.Choice("posterior", description="z ~ N(μ_i, σ_i): alrededor de patrones aprendidos"),
         ]))
-        argv = ["--weights", weights, "--datatype", data, "--sampling", sampling]
+        argv = ["generate", "vae", "--weights", weights, "--data", data, "--sampling", sampling]
         if _ask(_confirm("¿Grilla 2D del manifold?", default=False)):
             argv += ["--grid"]
-        _dispatch_script("generate_vae", argv + seed)
-    else:
+        _dispatch_main(argv + _seed_flag(cfg))
+
+    else:  # plot latent
+        weights = _ask(_path("Pesos .npz del VAE entrenado:", default="output/vae/"))
         data = _ask(_select("Dataset:", choices=["emoji", "letters"], default="emoji"))
         sampling = _ask(_select("Muestreo:", choices=[
             questionary.Choice("normal", description="generados z ~ N(0,1)"),
-            questionary.Choice("latent_bounds", description="uniforme dentro del rango ocupado"),
+            questionary.Choice("bounds", description="uniforme dentro del rango latente ocupado"),
         ]))
-        argv = ["--weights", weights, "--data", data, "--sampling", sampling]
-        _dispatch_script("plot_latent_combined", argv + seed)
+        argv = ["plot", "latent", "--weights", weights, "--data", data, "--sampling", sampling]
+        _dispatch_main(argv + _seed_flag(cfg))
 
 
 def _menu_study(cfg):

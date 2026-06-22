@@ -4,9 +4,9 @@ generate_from_latent.py — Generate synthetic font patterns from random latent 
 Loads a pre-trained autoencoder and samples random points from the latent space,
 then decodes them to generate new (synthetic) font patterns.
 
-Usage:
-    python generate.py --weights output/ae/letters/...../weights.npz --num-samples 5
-    python generate.py --weights path/to/weights.npz -n 8 --datatype letters
+Entrada pública por main.py (este main(argv) es sólo detalle interno):
+    python main.py generate ae --weights output/ae/.../weights.npz -n 5
+    python main.py generate ae --weights .../weights.npz -n 8 --data letters --sampling normal
 """
 import argparse
 from pathlib import Path
@@ -62,10 +62,10 @@ def main(argv=None) -> None:
         help="Path to pre-trained weights (.npz file)",
     )
     parser.add_argument(
-        "--sampling-method",
-        choices=["latent_bounds", "normal"],
-        default="latent_bounds",
-        help="Random sampling strategy for latent space",
+        "--sampling",
+        choices=["normal", "bounds"],
+        default="bounds",
+        help="normal: z~N(0,1)  ·  bounds: uniforme dentro del rango latente ocupado",
     )
 
     parser.add_argument(
@@ -76,10 +76,10 @@ def main(argv=None) -> None:
         help="Number of samples to generate (default: 5)",
     )
     parser.add_argument(
-        "--datatype",
+        "--data", "--datatype", dest="data",
         choices=["letters", "emoji"],
         default="letters",
-        help="Dataset type (for architecture consistency, default: letters)",
+        help="dataset (debe coincidir con el modelo entrenado, default: letters)",
     )
     parser.add_argument(
         "--latent-dim",
@@ -96,8 +96,8 @@ def main(argv=None) -> None:
     parser.add_argument(
         "--output",
         type=str,
-        default="output/generated",
-        help="Output directory for generated samples (default: output/generated)",
+        default="output/ae/generated",
+        help="Output directory for generated samples (default: output/ae/generated)",
     )
     parser.add_argument(
         "--plot",
@@ -118,18 +118,19 @@ def main(argv=None) -> None:
     model = load_weights(model, args.weights)
 
     print(f"\nGenerating {args.num_samples} samples from latent space...")
-    training_data = load_fonts(args.datatype)
+    training_data = load_fonts(args.data)
     training_positions = model.get_latent_positions(training_data)
     latent_min = training_positions.min(axis=0)
     latent_max = training_positions.max(axis=0)
 
-
+    # "bounds" es el nombre público; internamente la estrategia se llama "latent_bounds".
+    method = "normal" if args.sampling == "normal" else "latent_bounds"
     latent_samples, generated = generate_samples(
         model,
         num_samples=args.num_samples,
         latent_dim=args.latent_dim,
         seed=args.seed,
-        sampling_method=args.sampling_method,
+        sampling_method=method,
         latent_bounds=(latent_min, latent_max),
     )
 
@@ -146,8 +147,8 @@ def main(argv=None) -> None:
 
     image_file = plot_generated(
         generated, latent_samples, str(output_dir / "generated_samples.png"),
-        title=f"{args.datatype.capitalize()}: muestras generadas (AE)",
-        subtitle=f"z muestreado del latente ({args.sampling_method}) · decode → patrón",
+        title=f"{args.data.capitalize()}: muestras generadas (AE)",
+        subtitle=f"z muestreado del latente ({args.sampling}) · decode → patrón",
     )
     print(f"Generated images saved to: {image_file}")
 
@@ -162,7 +163,7 @@ def main(argv=None) -> None:
 
             hp = {
                 "generated": args.num_samples,
-                "datatype": args.datatype,
+                "datatype": args.data,
                 "seed": args.seed,
             }
 
@@ -175,9 +176,9 @@ def main(argv=None) -> None:
             plot_latent_with_generated(
                 training_positions,
                 latent_samples,
-                labels=resolve_labels(args.datatype),
+                labels=resolve_labels(args.data),
                 output_path=plot_file,
-                title=f"{args.datatype.capitalize()} latent space with {args.num_samples} generated samples",
+                title=f"{args.data.capitalize()} latent space with {args.num_samples} generated samples",
                 subtitle=f"Generated samples (orange stars) overlaid on training data (blue dots)",
             )
             print(f"Latent space plot saved to: {plot_file}")

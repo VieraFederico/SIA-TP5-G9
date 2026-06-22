@@ -88,7 +88,7 @@ def main(argv=None):
     parser.add_argument("--data", choices=["letters", "emoji"], default="letters")
     parser.add_argument("--realizations", type=int, default=5,
                         help="realizaciones de ruido promediadas por punto")
-    parser.add_argument("--output", default="output/dae/denoising_sweep.png")
+    parser.add_argument("--output", default="output/study/denoising/denoising_sweep.png")
     args = parser.parse_args(argv)
 
     clean = load_fonts(args.data)

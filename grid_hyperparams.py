@@ -169,7 +169,7 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42, help="seed base (las demás son base+1, ...)")
     parser.add_argument("--axis", choices=["all", *AXES], default="all")
     parser.add_argument("--data", choices=["letters", "emoji"], default="letters")
-    parser.add_argument("--output-dir", default="output/ae/grid_hyperparams")
+    parser.add_argument("--output-dir", default="output/study/hyperparams")
     args = parser.parse_args(argv)
 
     outdir = Path(args.output_dir)
