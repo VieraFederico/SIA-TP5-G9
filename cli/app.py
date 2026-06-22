@@ -67,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     vae = subparsers.add_parser("vae", help="variational autoencoder sobre los emojis")
     _add_common_args(vae, default_data="emoji")
+    vae.add_argument(
+        "--kl", type=float, default=None, metavar="W",
+        help="peso del término KL (β-VAE); default: vae.KL_WEIGHT. kl=0 → solo reconstrucción",
+    )
 
     return parser
 
@@ -89,6 +93,7 @@ def main(argv=None) -> None:
         run_vae(
             datatype=args.data,
             with_noise=args.noise,
+            kl_weight=args.kl,
             load_path=args.load_path,
             save=args.save,
             seed=args.seed,

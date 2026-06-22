@@ -27,7 +27,7 @@ from experiment import (
 
 # Tamaños por capa (sólo metadata para el log de ExperimentConfig).
 VAE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 2, 8, 16, 20, 25, 30, 35]
-KL_WEIGHT = 0.01
+KL_WEIGHT = 0.03
 
 
 def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencoder:
@@ -39,8 +39,8 @@ def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencod
         NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
     ])
-    mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
-    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
+    mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
+    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
     decoder = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=2, n_neurons=8, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),
@@ -75,15 +75,19 @@ def run_vae(
     *,
     datatype: str = "emoji",
     with_noise: bool = True,
+    kl_weight: float | None = None,
     load_path: str | None = None,
     save: bool = False,
     seed: int | None = None,
 ):
     if seed is not None:
         np.random.seed(seed)
+    if kl_weight is None:
+        kl_weight = KL_WEIGHT
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise)
     model = build_vae_model(act,seed)
+    model.kl_weight = kl_weight
     trainer, bce = make_trainer(VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence")
 
     hp = {
@@ -92,7 +96,7 @@ def run_vae(
         "salt": SALT_P if with_noise else None,
         "epochs": EPOCHS,
         "lr": LEARNING_RATE,
-        "kl": KL_WEIGHT,
+        "kl": kl_weight,
         "Seed" : seed
     }
 
