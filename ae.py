@@ -16,6 +16,7 @@ from network.autoencoder import Autoencoder
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
 from noise.salt_n_pepper import SaltNPepperNoise
+from sampling import set_seed
 
 from experiment import (
     BATCH_SIZE,
@@ -165,8 +166,7 @@ def run_ae(
 ):
     if seed is None:               # --seed overridea; si no, usa el default de config.json
         seed = SEED
-    if seed is not None:
-        np.random.seed(seed)
+    set_seed(seed)
 
     if salt_p is None:
         salt_p = SALT_P

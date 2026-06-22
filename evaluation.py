@@ -10,6 +10,31 @@ Solo depende de numpy, así que corre sin importar el lío de imports src./no-sr
 import numpy as np
 
 
+def binarize(x, threshold: float = 0.5) -> np.ndarray:
+    """Pasa una salida continua a 0/1 con un umbral (0.5 por defecto)."""
+    return (np.asarray(x, dtype=float) >= threshold).astype(int)
+
+
+def pixel_errors_per_pattern(target, recon, threshold: float = 0.5) -> np.ndarray:
+    """Píxeles distintos por patrón entre target y reconstrucción (ambos binarizados).
+
+    Acepta (n, d) -> (n,) o un patrón suelto (d,) -> escalar.
+    """
+    return (binarize(target, threshold) != binarize(recon, threshold)).sum(axis=-1)
+
+
+def nearest_pattern_distance(generated, clean, threshold: float = 0.5) -> np.ndarray:
+    """Para cada patrón generado, distancia en píxeles al patrón limpio MÁS cercano.
+
+    Mide cuán "real" es lo generado: 0 = idéntico a una letra del set.
+    """
+    clean_bin = binarize(clean, threshold)
+    return np.array([
+        int((clean_bin != binarize(g, threshold)).sum(axis=1).min())
+        for g in np.atleast_2d(generated)
+    ])
+
+
 def pixel_error_counts(model, X_target, X_input=None, reconstruct=None,
                        threshold: float = 0.5, max_errors_ok: int = 1):
     """Versión silenciosa de pixel_error_report para los barridos (corremos decenas de
@@ -24,10 +49,7 @@ def pixel_error_counts(model, X_target, X_input=None, reconstruct=None,
         reconstruct = model.forward
 
     errors = np.array([
-        int(np.sum(
-            (np.asarray(X_target[i]).reshape(-1) > threshold).astype(int)
-            != (np.asarray(reconstruct(X_input[i])).reshape(-1) > threshold).astype(int)
-        ))
+        int(pixel_errors_per_pattern(X_target[i], reconstruct(X_input[i]), threshold))
         for i in range(len(X_target))
     ])
     return int((errors <= max_errors_ok).sum()), int(errors.max()), float(errors.mean())
@@ -69,10 +91,7 @@ def pixel_error_report(
     rows = []
     for i in range(len(X_target)):
         x_hat = np.asarray(reconstruct(X_input[i])).reshape(-1)
-        target_bin = (np.asarray(X_target[i]).reshape(-1) > threshold).astype(int)
-        recon_bin = (x_hat > threshold).astype(int)
-
-        pixel_errors = int(np.sum(target_bin != recon_bin))
+        pixel_errors = int(pixel_errors_per_pattern(X_target[i], x_hat, threshold))
         # error continuo, por si se quiere comparar (no es el criterio del enunciado)
         mse = float(np.mean((np.asarray(X_target[i]).reshape(-1) - x_hat) ** 2))
 

@@ -13,6 +13,7 @@ from graphs import plot_latent_distributions
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
 from network.variational_autoencoder import VariationalAutoencoder
+from sampling import set_seed
 
 from experiment import (
     EPOCHS,
@@ -85,8 +86,7 @@ def run_vae(
 ):
     if seed is None:               # --seed overridea; si no, usa el default de config.json
         seed = SEED
-    if seed is not None:
-        np.random.seed(seed)
+    set_seed(seed)
     if kl_weight is None:
         kl_weight = KL_WEIGHT
     act = make_activations()

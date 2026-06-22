@@ -16,6 +16,7 @@ import numpy as np
 
 from ae import build_ae_model
 from evaluation import pixel_error_counts
+from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE,
     make_activations, make_trainer, study_subtitle,
@@ -36,7 +37,7 @@ ARCHITECTURES = {
 
 def run_seed(widths, hidden_act, seed, epochs, clean):
     """Entrena una arquitectura con una seed. Devuelve sus métricas y la curva de loss."""
-    np.random.seed(seed)
+    set_seed(seed)
 
     model = build_ae_model(make_activations(), seed=seed,
                            encoder_widths=widths, hidden_act=hidden_act)

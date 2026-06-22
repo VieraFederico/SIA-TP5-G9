@@ -19,6 +19,8 @@ from pathlib import Path
 
 import numpy as np
 
+from evaluation import nearest_pattern_distance, pixel_errors_per_pattern
+from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
     make_activations, make_trainer, study_subtitle,
@@ -45,7 +47,7 @@ def hp_line(args, kl=None):
 
 
 def train_vae(kl_weight, seed, epochs, x):
-    np.random.seed(seed)
+    set_seed(seed)
     act = make_activations()
     model = build_vae_model(act, seed=seed)
     model.kl_weight = kl_weight
@@ -57,18 +59,12 @@ def train_vae(kl_weight, seed, epochs, x):
 
 def recon_pixel_error(model, clean):
     recon = np.array([model.reconstruct(x) for x in clean])
-    cb = (clean >= 0.5).astype(int)
-    rb = (recon >= 0.5).astype(int)
-    return float((cb != rb).sum(axis=1).mean())
+    return float(pixel_errors_per_pattern(clean, recon).mean())
 
 
 def generation_distance(model, clean, gen_z):
-    cb = (clean >= 0.5).astype(int)
-    dists = []
-    for z in gen_z:
-        out = (model.decode(z) >= 0.5).astype(int)
-        dists.append((cb != out).sum(axis=1).min())
-    return float(np.mean(dists))
+    generated = np.array([model.decode(z) for z in gen_z])
+    return float(nearest_pattern_distance(generated, clean).mean())
 
 
 def save_latent_figure(model, clean, gen_z, cloud_rng, kl, outdir, cloud_samples, subtitle=None):

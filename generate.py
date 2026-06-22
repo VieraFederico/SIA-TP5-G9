@@ -16,6 +16,7 @@ import numpy as np
 from ae import build_ae_model
 from experiment import make_activations, resolve_labels, output_path, hyperparams_slug, hyperparams_subtitle
 from graphs import visualize_font, plot_latent_with_generated, plot_generated
+from sampling import latent_bounds, sample_prior, set_seed
 from weights_io import load_weights
 
 
@@ -27,8 +28,7 @@ def generate_samples(
     sampling_method: str = "latent_bounds",
     latent_bounds: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    if seed is not None:
-        np.random.seed(seed)
+    set_seed(seed)
 
     if sampling_method == "latent_bounds":
         if latent_bounds is None:
@@ -42,7 +42,7 @@ def generate_samples(
         )
 
     elif sampling_method == "normal":
-        latent_samples = np.random.standard_normal((num_samples, latent_dim))
+        latent_samples = sample_prior(num_samples, latent_dim)   # seed ya fijada arriba
 
     else:
         raise ValueError(f"Unknown sampling_method: {sampling_method!r}")
@@ -120,8 +120,7 @@ def main(argv=None) -> None:
     print(f"\nGenerating {args.num_samples} samples from latent space...")
     training_data = load_fonts(args.data)
     training_positions = model.get_latent_positions(training_data)
-    latent_min = training_positions.min(axis=0)
-    latent_max = training_positions.max(axis=0)
+    latent_min, latent_max = latent_bounds(training_positions)
 
     # "bounds" es el nombre público; internamente la estrategia se llama "latent_bounds".
     method = "normal" if args.sampling == "normal" else "latent_bounds"

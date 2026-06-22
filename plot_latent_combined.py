@@ -15,11 +15,13 @@ from pathlib import Path
 
 import numpy as np
 
+from evaluation import nearest_pattern_distance
 from experiment import make_activations, resolve_labels
 from font import load_fonts
 from graphs.style import (
     BLACK, BLUE, FG, FG_DIM, ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark,
 )
+from sampling import latent_bounds, sample_prior, set_seed
 from vae import build_vae_model
 from weights_io import load_weights
 
@@ -37,7 +39,7 @@ def main(argv=None):
                         help="ruta del .png; por defecto se deriva del nombre de los pesos")
     args = parser.parse_args(argv)
 
-    np.random.seed(args.seed)
+    set_seed(args.seed)
 
     act = make_activations()
     clean = load_fonts(args.data)
@@ -50,14 +52,14 @@ def main(argv=None):
 
     # ---- generación ----
     if args.sampling == "normal":
-        gen = np.random.standard_normal((args.n_generated, 2))
+        gen = sample_prior(args.n_generated, 2)   # seed ya fijada arriba
     else:  # bounds: uniforme dentro del rango ocupado por las medias
-        lo, hi = means.min(axis=0), means.max(axis=0)
+        lo, hi = latent_bounds(means)
         gen = np.random.uniform(lo, hi, size=(args.n_generated, 2))
 
     # ---- distancia de generación (px al patrón real más cercano) ----
-    cb = (clean >= 0.5).astype(int)
-    dists = [int((cb != (model.decode(z) >= 0.5).astype(int)).sum(axis=1).min()) for z in gen]
+    generated = np.array([model.decode(z) for z in gen])
+    dists = [int(d) for d in nearest_pattern_distance(generated, clean)]
     print(f"Distancia de generación (px al patrón real más cercano): "
           f"promedio {np.mean(dists):.2f}, por muestra {dists}")
 

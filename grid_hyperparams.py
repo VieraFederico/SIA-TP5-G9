@@ -27,6 +27,7 @@ import numpy as np
 
 from ae import AE_ARCHITECTURE, build_ae_model
 from evaluation import pixel_error_counts
+from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE,
     hyperparams_slug, make_activations, make_trainer, study_subtitle,
@@ -91,7 +92,7 @@ def apply_init(model, scheme, seed):
 def run_cell(seed, clean, *, lr, mode, init, opt, act, epochs):
     """El AE fijo entrenado con un set concreto de hiperparámetros y una seed.
     Devuelve (pasan, peor_px)."""
-    np.random.seed(seed)
+    set_seed(seed)
 
     model = build_ae_model(make_activations(), seed=seed, hidden_act=act)
     apply_init(model, init, seed)

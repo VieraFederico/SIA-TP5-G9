@@ -16,6 +16,8 @@ from pathlib import Path
 import numpy as np
 
 from ae import build_ae_model, AE_ARCHITECTURE
+from evaluation import pixel_errors_per_pattern
+from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
     make_activations, make_trainer, study_subtitle,
@@ -35,7 +37,7 @@ COLORS = {None: FG, 0.05: BLUE, 0.10: ORANGE, 0.20: RED}
 
 def train_model(salt, seed, epochs, clean):
     """Entrena un AE (salt=None) o DAE (salt>0, ruido re-sampleado por época)."""
-    np.random.seed(seed)
+    set_seed(seed)
     act = make_activations()
     model = build_ae_model(act, seed=seed)
     trainer, _ = make_trainer(AE_ARCHITECTURE, "binary_cross_entropy")
@@ -54,16 +56,14 @@ def train_model(salt, seed, epochs, clean):
 
 def eval_curve(model, clean, seed, n_real=5):
     """Error promedio en píxeles sobre ruido NUEVO, para cada nivel de TEST_GRID."""
-    np.random.seed(seed + 1000)  # stream de evaluación, igual para todos los modelos
-    cb = (clean >= 0.5).astype(int)
+    set_seed(seed + 1000)  # stream de evaluación, igual para todos los modelos
     curve = []
     for p in TEST_GRID:
         errs = []
         for _ in range(n_real):
             noisy = clean.copy() if p == 0.0 else SaltNPepperNoise(p).add_noise(clean.copy())
             recon = np.array([model.forward(x) for x in noisy])
-            rb = (recon >= 0.5).astype(int)
-            errs.append((cb != rb).sum(axis=1).mean())
+            errs.append(pixel_errors_per_pattern(clean, recon).mean())
         curve.append(float(np.mean(errs)))
     return curve
 

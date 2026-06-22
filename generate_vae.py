@@ -28,6 +28,7 @@ from experiment import (
     SEED,
 )
 from graphs import visualize_font, plot_generated
+from sampling import latent_bounds, sample_prior, set_seed
 from weights_io import load_weights
 
 
@@ -37,9 +38,7 @@ def generate_prior_samples(model, num_samples: int, latent_dim: int = 2, seed: i
     Mismo patrón que generate.py (AE) y sweep_kl/plot_latent_combined: muestrear el
     PRIOR y decodificar — no depende de los patrones de entrenamiento.
     """
-    if seed is not None:
-        np.random.seed(seed)
-    latent_samples = np.random.standard_normal((num_samples, latent_dim))
+    latent_samples = sample_prior(num_samples, latent_dim, seed)
     generated = np.array([model.decode(z) for z in latent_samples])
     return latent_samples, generated
 
@@ -57,8 +56,7 @@ def generate_samples_around_means(
 
     Devuelve (latent_samples, generated).
     """
-    if seed is not None:
-        np.random.seed(seed)
+    set_seed(seed)
 
     n_patterns, latent_dim = means.shape
     latent_samples = []
@@ -81,8 +79,7 @@ def generate_grid_samples(model, means: np.ndarray, grid_n: int = 12, margin: fl
     """Malla (z1,z2) sobre el rango latente ocupado (get_latent_distributions);
     decodifica cada celda. Orden row-major (fila 0 = z2 alto), listo para el
     mosaico imshow de la Fase 6. Devuelve (latent, generated)."""
-    lo = means.min(axis=0)
-    hi = means.max(axis=0)
+    lo, hi = latent_bounds(means)
     pad = (hi - lo) * margin
     lo, hi = lo - pad, hi + pad
     z1 = np.linspace(lo[0], hi[0], grid_n)
