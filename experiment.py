@@ -15,7 +15,7 @@ from activation.identity import IdentityActivation
 from activation.logistic import LogisticActivation
 from activation.relu import ReLUActivation
 from activation.tanh import TanhActivation
-from config import ExperimentConfig
+from config import ExperimentConfig, load_config
 from cost.binary_cross_entropy import BinaryCrossEntropyCost
 from evaluation import pixel_error_report
 from font import load_fonts, EMOJI_LABEL_NAMES
@@ -27,17 +27,23 @@ from weights_io import load_weights, save_weights
 # Nombres de los 32 emojis (mismo orden que EMOJI_FONTS_DATA en font.py).
 
 
-# Hiperparámetros de entrenamiento (únicos, compartidos AE/VAE). Una sola
-# fuente: make_trainer los usa y los slugs de carpeta los reportan.
-LEARNING_RATE = 0.001
-EPOCHS = 7500
-BATCH_SIZE = 5
-EPSILON = 1e-3
-TRAINING_MODE = "batch"
-SALT_P = 0.25
+# Hiperparámetros de entrenamiento: ÚNICA fuente de verdad = config.json
+# (auditoría §4-I). Se cargan una vez al importar; ae.py / vae.py / sweeps los
+# re-exportan desde acá. El CLI puede overridearlos por flag.
+_CFG = load_config()
+LEARNING_RATE = _CFG.learning_rate
+EPOCHS = _CFG.epochs
+BATCH_SIZE = _CFG.batch_size          # sólo afecta el modo "minibatch"
+EPSILON = _CFG.epsilon
+TRAINING_MODE = _CFG.training_mode
+SALT_P = _CFG.salt_p
+KL_WEIGHT = _CFG.kl_weight            # β del VAE (lo consume vae.py)
+ADAM_BETA1 = _CFG.adam_beta1
+ADAM_BETA2 = _CFG.adam_beta2
+SEED = _CFG.seed                      # seed por defecto; el flag --seed lo overridea
 
 # Todas las salidas van a:  output/<modelo>/<tipo>/<hiperparams>/<archivo>
-OUTPUT_ROOT = Path("output")
+OUTPUT_ROOT = Path(_CFG.output_root)
 
 
 def hyperparams_slug(hp: dict) -> str:
@@ -61,8 +67,8 @@ def hyperparams_subtitle(hp: dict) -> str:
     full = {
         **hp,
         "opt": "adam",
-        "b1": 0.9,
-        "b2": 0.999,
+        "b1": ADAM_BETA1,
+        "b2": ADAM_BETA2,
         "mode": TRAINING_MODE,
         "eps": EPSILON,
     }
@@ -118,7 +124,7 @@ def resolve_labels(datatype: str) -> list[str]:
 def make_trainer(architecture: list[int], cost_name: str, seed : int | None = None):
     """Trainer + función de costo, con los hiperparámetros fijos del TP."""
     bce = BinaryCrossEntropyCost()
-    adam = AdamOptimizer(learning_rate=LEARNING_RATE)
+    adam = AdamOptimizer(learning_rate=LEARNING_RATE, beta1=ADAM_BETA1, beta2=ADAM_BETA2)
     trainer = Trainer(
         cost_fn=bce,
         optimizer=adam,
@@ -137,7 +143,7 @@ def make_trainer(architecture: list[int], cost_name: str, seed : int | None = No
             architecture=architecture,
             cost_function=cost_name,
             optimizer="adam",
-            eta=0.01,
+            eta=LEARNING_RATE,   # antes 0.01 (inerte/contradictorio, §4-I); ahora = learning_rate real
             training_mode=TRAINING_MODE,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,

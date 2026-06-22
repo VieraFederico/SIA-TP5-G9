@@ -22,6 +22,7 @@ from experiment import (
     EPOCHS,
     LEARNING_RATE,
     SALT_P,
+    SEED,
     load_dataset,
     make_activations,
     make_trainer,
@@ -150,6 +151,8 @@ def run_ae(
     show_viz: bool = True,
     seed: int | None = None,
 ):
+    if seed is None:               # --seed overridea; si no, usa el default de config.json
+        seed = SEED
     if seed is not None:
         np.random.seed(seed)
 

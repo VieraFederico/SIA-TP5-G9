@@ -45,13 +45,39 @@ class ExperimentConfig:
 
 
 
-def load_config(path: Path) -> ExperimentConfig:
+@dataclass
+class Config:
+    """Única fuente de verdad de los hiperparámetros del TP (lee config.json).
+
+    Sólo perillas que el pipeline realmente usa (auditoría §4-I): no hay `eta`
+    contradictorio (hay un único `learning_rate`) ni metadata muerta. El CLI
+    puede overridear cualquiera de estos por flag.
+    """
+    learning_rate: float
+    epochs: int
+    training_mode: str                        # "online" | "batch" | "minibatch"
+    batch_size: int                           # sólo se usa en modo "minibatch"
+    epsilon: float                            # umbral de convergencia E < ε
+    salt_p: float                             # nivel de ruido Salt & Pepper del DAE
+    kl_weight: float                          # β del VAE (vae.KL_WEIGHT)
+    adam_beta1: float = 0.9
+    adam_beta2: float = 0.999
+    seed: int | None = None                   # default de reproducibilidad; --seed lo overridea
+    output_root: str = "output"               # raíz de las salidas generadas
+
+
+# config.json vive en la raíz del repo, al lado de este archivo.
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+
+
+def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> Config:
+    """Lee config.json (o el path dado) y devuelve la Config tipada."""
     with open(path) as f:
         data = json.load(f)
-    return ExperimentConfig(**data)
+    return Config(**data)
 
 
-def save_config(cfg: ExperimentConfig, path: Path) -> None:
+def save_config(cfg: Config, path: Path | str = DEFAULT_CONFIG_PATH) -> None:
     import dataclasses
     with open(path, "w") as f:
         json.dump(dataclasses.asdict(cfg), f, indent=2)

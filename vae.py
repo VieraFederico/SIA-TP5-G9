@@ -16,8 +16,10 @@ from network.variational_autoencoder import VariationalAutoencoder
 
 from experiment import (
     EPOCHS,
+    KL_WEIGHT,
     LEARNING_RATE,
     SALT_P,
+    SEED,
     load_dataset,
     make_activations,
     make_trainer,
@@ -26,8 +28,8 @@ from experiment import (
 )
 
 # Tamaños por capa (sólo metadata para el log de ExperimentConfig).
+# KL_WEIGHT (β del VAE) ahora sale de config.json vía experiment.
 VAE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 2, 8, 16, 20, 25, 30, 35]
-KL_WEIGHT = 0.03
 
 
 def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencoder:
@@ -80,6 +82,8 @@ def run_vae(
     save: bool = False,
     seed: int | None = None,
 ):
+    if seed is None:               # --seed overridea; si no, usa el default de config.json
+        seed = SEED
     if seed is not None:
         np.random.seed(seed)
     if kl_weight is None:
