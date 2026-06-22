@@ -193,7 +193,8 @@ def _menu_study(cfg):
     argv = ["study", kind, "--epochs", epochs, "--seeds", seeds]
 
     if kind == "hyperparams":
-        argv += ["--axis", _ask(_select("Eje:", choices=["all", "lr", "mode", "init"]))]
+        argv += ["--axis", _ask(_select(
+            "Eje:", choices=["all", "lr", "mode", "init", "opt", "act", "epochs"]))]
     if kind == "denoising":
         argv += ["--realizations", _ask(_text("Realizaciones por punto:", default="5"))]
 
