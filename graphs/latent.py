@@ -13,7 +13,7 @@ from matplotlib.patches import Ellipse
 
 from activation.activation import Array
 from graphs.style import (
-    BLUE, FG, ORANGE, RED,
+    BLACK, BLUE, FG, FG_DIM, ORANGE, RED,
     add_subtitle, dark_figure, dark_grid, dark_legend, save_dark,
 )
 
@@ -24,6 +24,54 @@ def _annotate(ax, labels: list[str] | None, points: Array) -> None:
         return
     for label, (x, y) in zip(labels, points):
         ax.annotate(label, (x, y), textcoords="offset points", xytext=(5, 5), color=FG)
+
+
+def plot_latent_clouds_generated(
+    clouds: Array,
+    means: Array,
+    generated: Array,
+    *,
+    output_path: str,
+    title: str,
+    subtitle: str | None = None,
+    labels: list[str] | None = None,
+    gen_label: str = "generados",
+    figsize: tuple = (8, 7),
+    mean_size: int = 40,
+    gen_size: int = 180,
+    gen_edge_lw: float = 0.6,
+    panel_limits: tuple | None = None,
+    legend_loc: str = "upper right",
+) -> str:
+    """Latente del VAE con tres capas: nubes z~q(z|x) (ya muestreadas por el caller),
+    medias μ y generados (estrellas). El muestreo de las nubes lo hace el caller y lo
+    pasa en `clouds` (n, 2) para no meter RNG acá y mantener la figura reproducible.
+
+    Lo usan sweep_kl (panel con límites fijos) y plot_latent_combined (con etiquetas)."""
+    fig, ax = dark_figure(figsize=figsize)
+    ax.scatter(clouds[:, 0], clouds[:, 1], s=6, color=BLUE, alpha=0.15, linewidths=0,
+               label="z ~ q(z|x) (explorado)")
+    ax.scatter(means[:, 0], means[:, 1], s=mean_size, color=RED, zorder=3, label="medias μ")
+    ax.scatter(generated[:, 0], generated[:, 1], s=gen_size, marker="*", color=ORANGE,
+               edgecolors="black", linewidths=gen_edge_lw, zorder=4, label=gen_label)
+
+    if labels is not None:
+        for label, (x, y) in zip(labels, means):
+            ax.annotate(label, (x, y), textcoords="offset points", xytext=(5, 4),
+                        color=FG, fontsize=8)
+
+    ax.set_title(title)
+    ax.set_xlabel("z1")
+    ax.set_ylabel("z2")
+    if panel_limits is not None:
+        ax.set_xlim(*panel_limits)
+        ax.set_ylim(*panel_limits)
+    dark_grid(ax)
+    leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM, loc=legend_loc, fontsize=8)
+    for t in leg.get_texts():
+        t.set_color(FG)
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, output_path)
 
 
 def plot_latent_points(

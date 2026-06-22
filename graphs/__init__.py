@@ -18,19 +18,30 @@ API pública:
 import matplotlib
 matplotlib.use("Agg")
 
-from graphs.latent import plot_latent_distributions, plot_latent_points, plot_latent_with_generated
+from graphs.latent import (
+    plot_latent_clouds_generated,
+    plot_latent_distributions,
+    plot_latent_distributions_with_generated,
+    plot_latent_points,
+    plot_latent_with_generated,
+)
 from graphs.images import (
     plot_generated, plot_loss_curve, plot_reconstructions, plot_triptych,
 )
+from graphs.studies import bar_study, overlaid_curves
 from font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
 
 __all__ = [
     "plot_latent_points",
     "plot_latent_distributions",
+    "plot_latent_distributions_with_generated",
     "plot_latent_with_generated",
+    "plot_latent_clouds_generated",
     "plot_reconstructions",
     "plot_triptych",
     "plot_generated",
     "plot_loss_curve",
+    "bar_study",
+    "overlaid_curves",
     "visualize_font",
 ]

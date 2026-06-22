@@ -26,9 +26,8 @@ from experiment import (
     make_activations, study_subtitle, train_once,
 )
 from font import load_fonts
-from graphs.style import (
-    BLACK, BLUE, FG, FG_DIM, ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark,
-)
+from graphs import plot_latent_clouds_generated
+from graphs.style import ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark
 from vae import VAE_ARCHITECTURE, build_vae_model
 
 KL_LEVELS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
@@ -71,23 +70,14 @@ def save_latent_figure(model, clean, gen_z, cloud_rng, kl, outdir, cloud_samples
     eps = cloud_rng.standard_normal((len(clean), cloud_samples, 2))
     clouds = (means[:, None, :] + stds[:, None, :] * eps).reshape(-1, 2)
 
-    fig, ax = dark_figure(figsize=(7, 6))
-    ax.scatter(clouds[:, 0], clouds[:, 1], s=6, color=BLUE, alpha=0.15, linewidths=0,
-               label="z ~ q(z|x) (explorado)")
-    ax.scatter(means[:, 0], means[:, 1], s=30, color=RED, zorder=3, label="medias μ")
-    ax.scatter(gen_z[:12, 0], gen_z[:12, 1], s=150, marker="*", color=ORANGE,
-               edgecolors="black", linewidths=0.5, zorder=4, label="generados z~N(0,1)")
-    ax.set_title(f"Espacio latente VAE — kl = {kl}")
-    ax.set_xlabel("z1")
-    ax.set_ylabel("z2")
-    ax.set_xlim(*PANEL_LIMITS)
-    ax.set_ylim(*PANEL_LIMITS)
-    dark_grid(ax)
-    leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM, loc="upper right", fontsize=8)
-    for t in leg.get_texts():
-        t.set_color(FG)
-    add_subtitle(fig, subtitle)
-    save_dark(fig, str(outdir / f"latent_kl-{kl}.png"))
+    plot_latent_clouds_generated(
+        clouds, means, gen_z[:12],
+        output_path=str(outdir / f"latent_kl-{kl}.png"),
+        title=f"Espacio latente VAE — kl = {kl}",
+        subtitle=subtitle, gen_label="generados z~N(0,1)",
+        figsize=(7, 6), mean_size=30, gen_size=150, gen_edge_lw=0.5,
+        panel_limits=PANEL_LIMITS,
+    )
 
 
 def save_metric_figure(kls, values, ylabel, title, color, filename, outdir, subtitle, stds=None):
