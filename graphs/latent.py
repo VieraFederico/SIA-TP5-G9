@@ -111,7 +111,84 @@ def plot_latent_with_generated(
 
     return save_dark(fig, output_path)
 
+def plot_latent_distributions_with_generated(
+    means: Array,
+    standard_deviations: Array,
+    generated_samples: Array,
+    labels: list[str] | None = None,
+    output_path: str = "latent_space.png",
+    title: str = "2D latent space with generated samples",
+    subtitle: str | None = None,
+    samples_per_pattern: int = 20,
+    ellipse_std: float = 1.0,
+) -> str:
+    if means.shape[1] != 2:
+        raise ValueError(f"Expected 2D latent space, got shape {means.shape}")
 
+    fig, ax = dark_figure(figsize=(9, 7))
+
+    # Original distribution
+    for mean, standard_deviation in zip(means, standard_deviations):
+        if samples_per_pattern > 0:
+            samples = np.random.normal(
+                loc=mean,
+                scale=standard_deviation,
+                size=(samples_per_pattern, 2),
+            )
+            ax.scatter(
+                samples[:, 0],
+                samples[:, 1],
+                color=BLUE,
+                alpha=0.18,
+                s=12,
+                linewidths=0,
+            )
+
+        ellipse = Ellipse(
+            xy=mean,
+            width=2 * ellipse_std * standard_deviation[0],
+            height=2 * ellipse_std * standard_deviation[1],
+            angle=0,
+            edgecolor=ORANGE,
+            facecolor="none",
+            alpha=0.7,
+            linewidth=1.2,
+        )
+        ax.add_patch(ellipse)
+
+    # Means
+    ax.scatter(
+        means[:, 0],
+        means[:, 1],
+        color=RED,
+        s=35,
+        label="Latent mean μ",
+        zorder=3,
+    )
+
+    # Generated samples
+    ax.scatter(
+        generated_samples[:, 0],
+        generated_samples[:, 1],
+        color=ORANGE,
+        s=100,
+        marker="*",
+        alpha=0.95,
+        edgecolors=RED,
+        linewidths=1.2,
+        label="Generated samples",
+        zorder=4,
+    )
+
+    _annotate(ax, labels, means)
+
+    ax.set_title(title)
+    ax.set_xlabel("Latent mean dimension 1")
+    ax.set_ylabel("Latent mean dimension 2")
+    dark_grid(ax)
+    dark_legend(ax, ["Samples z", f"{ellipse_std:g}σ region", "Latent mean μ", "Generated samples"])
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, output_path)
 
 def plot_latent_distributions(
     means: Array,

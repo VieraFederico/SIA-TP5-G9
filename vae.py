@@ -7,6 +7,8 @@ El término KL se suma en el backward del modelo, no en la función de costo.
 """
 import numpy as np
 
+from ae import _visualize_samples, _write_reconstruction_csv
+from font import EMOJI_LABELS
 from graphs import plot_latent_distributions
 from network.multilayer_perceptron import MultilayerPerceptron
 from network.neuron_layer import NeuronLayer
@@ -94,7 +96,7 @@ def run_vae(
         "Seed" : seed
     }
 
-    return run_experiment(
+    result =  run_experiment(
         model,
         trainer,
         bce,
@@ -111,3 +113,9 @@ def run_vae(
         save=save,
         extra_report=_vae_report,
     )
+
+
+
+    _visualize_samples(clean, x_input, result["reconstructed"], with_noise,EMOJI_LABELS)
+    _write_reconstruction_csv(clean, result["reconstructed"], output_dir="output")
+    return result

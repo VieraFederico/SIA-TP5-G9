@@ -1,5 +1,9 @@
 import numpy as np
 
+
+FONT_LABELS = ["`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+          "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "DEL"]
+
 FONTS_DATA = [
     [0x04, 0x04, 0x02, 0x00, 0x00, 0x00, 0x00],  # 0x60, `
    [0x00, 0x0e, 0x01, 0x0d, 0x13, 0x13, 0x0d],   # 0x61, a
@@ -34,6 +38,15 @@ FONTS_DATA = [
    [0x08, 0x15, 0x02, 0x00, 0x00, 0x00, 0x00],   # 0x7e, ~
    [0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f]   # 0x7f, DEL
 
+]
+EMOJI_LABELS = ["😀","🙁","😉","😮","❤️","⭐","✅","❌","⬆️","⬇️","⬅️","➡️","🏠","🎵","☀️","🌙","☁️","☂️","⚡","🌸",
+              "🌳","🐱","🐶","🐟","👻","💀","🤖","👽","🚀","🚗","☕","🍰"]
+
+EMOJI_LABEL_NAMES = [
+    "happy", "sad", "wink", "surprise", "heart", "star", "check", "cross",
+    "up", "down", "left", "right", "house", "music", "sun", "moon",
+    "cloud", "umbrella", "lightning", "flower", "tree", "cat", "dog", "fish",
+    "ghost", "skull", "robot", "alien", "rocket", "car", "coffee", "cake",
 ]
 
 EMOJI_FONTS_DATA = [

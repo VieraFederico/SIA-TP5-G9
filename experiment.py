@@ -18,19 +18,14 @@ from activation.tanh import TanhActivation
 from config import ExperimentConfig
 from cost.binary_cross_entropy import BinaryCrossEntropyCost
 from evaluation import pixel_error_report
-from font import load_fonts
+from font import load_fonts, EMOJI_LABEL_NAMES
 from noise.salt_n_pepper import SaltNPepperNoise
 from optimizer.adam import AdamOptimizer
 from trainer import Trainer
 from weights_io import load_weights, save_weights
 
 # Nombres de los 32 emojis (mismo orden que EMOJI_FONTS_DATA en font.py).
-EMOJI_LABELS = [
-    "happy", "sad", "wink", "surprise", "heart", "star", "check", "cross",
-    "up", "down", "left", "right", "house", "music", "sun", "moon",
-    "cloud", "umbrella", "lightning", "flower", "tree", "cat", "dog", "fish",
-    "ghost", "skull", "robot", "alien", "rocket", "car", "coffee", "cake",
-]
+
 
 # Hiperparámetros de entrenamiento (únicos, compartidos AE/VAE). Una sola
 # fuente: make_trainer los usa y los slugs de carpeta los reportan.
@@ -39,7 +34,7 @@ EPOCHS = 7500
 BATCH_SIZE = 5
 EPSILON = 1e-3
 TRAINING_MODE = "batch"
-SALT_P = 0.05
+SALT_P = 0.25
 
 # Todas las salidas van a:  output/<modelo>/<tipo>/<hiperparams>/<archivo>
 OUTPUT_ROOT = Path("output")
@@ -116,7 +111,7 @@ def load_dataset(datatype: str, with_noise: bool, salt_p: float = SALT_P):
 def resolve_labels(datatype: str) -> list[str]:
     """Etiqueta por patrón: emojis por nombre, letras por carácter ASCII."""
     if datatype == "emoji":
-        return list(EMOJI_LABELS)
+        return list(EMOJI_LABEL_NAMES)
     return [chr(code) if code < 0x7f else "DEL" for code in range(0x60, 0x80)]
 
 

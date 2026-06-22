@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from font import FONT_LABELS
 from graphs import plot_latent_points, visualize_font
 from network.autoencoder import Autoencoder
 from network.multilayer_perceptron import MultilayerPerceptron
@@ -62,7 +63,7 @@ def _plot_latent(model, clean, labels, output_path, title, subtitle) -> str:
     return plot_latent_points(positions, labels, output_path, title, subtitle)
 
 
-def _visualize_samples(clean, x_input, reconstructed, with_noise: bool) -> None:
+def _visualize_samples(clean, x_input, reconstructed, with_noise: bool, labels) -> None:
     """
     Visualize only samples where reconstruction differs from the clean original.
     Comparison is done after thresholding both arrays to 0/1.
@@ -71,16 +72,20 @@ def _visualize_samples(clean, x_input, reconstructed, with_noise: bool) -> None:
     clean_bin = (np.array(clean, dtype=float) >= 0.5).astype(int)
     recon_bin = (np.array(reconstructed, dtype=float) >= 0.5).astype(int)
 
+    # mismatched_indices = [
+    #     i for i in range(len(clean_bin))
+    #     if not np.array_equal(clean_bin[i], recon_bin[i])
+    # ]
+
     mismatched_indices = [
-        i for i in range(len(clean_bin))
-        if not np.array_equal(clean_bin[i], recon_bin[i])
+        i for i in range(9)
     ]
 
     if not mismatched_indices:
         print("All reconstructions match the originals (after thresholding at 0.5).")
         return
 
-    labels = ["`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z","{","|","}","~","DEL"]
+
     # Label letters as a, b, c... when possible; fallback to index otherwise.
     for i in mismatched_indices:
         name = labels[i]
@@ -182,7 +187,8 @@ def run_ae(
     )
 
     if show_viz:
-        _visualize_samples(clean, x_input, result["reconstructed"], with_noise)
+
+        _visualize_samples(clean, x_input, result["reconstructed"], with_noise, FONT_LABELS)
 
     _write_reconstruction_csv(clean, result["reconstructed"], output_dir="output")
     return result
