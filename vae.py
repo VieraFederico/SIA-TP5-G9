@@ -39,8 +39,8 @@ def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencod
         NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
     ])
-    mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
-    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"])
+    mean_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
+    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=2, activation=act["identity"], rand_seed=seed)
     decoder = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=2, n_neurons=8, activation=act["relu"],rand_seed=seed),
         NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),

@@ -12,4 +12,5 @@ class GaussianNoise(Noise):
 
 
     def add_noise(self, x: Array) -> Array:
-        return x + np.random.normal(0, self.sigma, size=x.shape)
+        noisy = x + np.random.normal(0, self.sigma, size=x.shape)
+        return np.clip(noisy, 0.0, 1.0)

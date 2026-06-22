@@ -73,13 +73,9 @@ def _visualize_samples(clean, x_input, reconstructed, with_noise: bool, labels) 
     clean_bin = (np.array(clean, dtype=float) >= 0.5).astype(int)
     recon_bin = (np.array(reconstructed, dtype=float) >= 0.5).astype(int)
 
-    # mismatched_indices = [
-    #     i for i in range(len(clean_bin))
-    #     if not np.array_equal(clean_bin[i], recon_bin[i])
-    # ]
-
     mismatched_indices = [
-        i for i in range(9)
+        i for i in range(len(clean_bin))
+        if not np.array_equal(clean_bin[i], recon_bin[i])
     ]
 
     if not mismatched_indices:
