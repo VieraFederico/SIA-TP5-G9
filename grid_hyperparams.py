@@ -30,7 +30,7 @@ from evaluation import pixel_error_counts
 from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    hyperparams_slug, make_activations, make_trainer, study_subtitle,
+    hyperparams_slug, make_activations, study_subtitle, train_once,
 )
 from font import load_fonts
 from graphs.studies import bar_study
@@ -97,11 +97,8 @@ def run_cell(seed, clean, *, lr, mode, init, opt, act, epochs):
     model = build_ae_model(make_activations(), seed=seed, hidden_act=act)
     apply_init(model, init, seed)
 
-    trainer, _ = make_trainer(AE_ARCHITECTURE, "binary_cross_entropy")
-    trainer.cfg.epochs = epochs
-    trainer.cfg.training_mode = mode
-    trainer.optimizer = make_optimizer(opt, lr)
-    trainer.fit(model=model, X_train=clean, zeta_train=clean, X_val=None, zeta_val=None)
+    train_once(model, clean, clean, AE_ARCHITECTURE,
+               epochs=epochs, training_mode=mode, optimizer=make_optimizer(opt, lr))
 
     passed, worst, _ = pixel_error_counts(model, clean)
     return passed, worst

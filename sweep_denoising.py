@@ -20,7 +20,7 @@ from evaluation import pixel_errors_per_pattern
 from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    make_activations, make_trainer, study_subtitle,
+    make_activations, study_subtitle, train_once,
 )
 from font import load_fonts
 from graphs.style import (
@@ -40,8 +40,6 @@ def train_model(salt, seed, epochs, clean):
     set_seed(seed)
     act = make_activations()
     model = build_ae_model(act, seed=seed)
-    trainer, _ = make_trainer(AE_ARCHITECTURE, "binary_cross_entropy")
-    trainer.cfg.epochs = epochs
 
     if salt is None:
         x_input, noise_fn = clean.copy(), None
@@ -49,8 +47,7 @@ def train_model(salt, seed, epochs, clean):
         x_input = SaltNPepperNoise(salt).add_noise(clean.copy())
         noise_fn = lambda: SaltNPepperNoise(salt).add_noise(clean.copy())
 
-    trainer.fit(model=model, X_train=x_input, zeta_train=clean,
-                X_val=None, zeta_val=None, noise_fn=noise_fn)
+    train_once(model, x_input, clean, AE_ARCHITECTURE, epochs=epochs, noise_fn=noise_fn)
     return model
 
 

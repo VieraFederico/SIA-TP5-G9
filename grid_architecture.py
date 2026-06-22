@@ -19,7 +19,7 @@ from evaluation import pixel_error_counts
 from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    make_activations, make_trainer, study_subtitle,
+    make_activations, study_subtitle, train_once,
 )
 from font import load_fonts
 from graphs.studies import bar_study, overlaid_curves
@@ -42,9 +42,7 @@ def run_seed(widths, hidden_act, seed, epochs, clean):
     model = build_ae_model(make_activations(), seed=seed,
                            encoder_widths=widths, hidden_act=hidden_act)
 
-    trainer, _ = make_trainer(widths, "binary_cross_entropy")
-    trainer.cfg.epochs = epochs
-    history = trainer.fit(model=model, X_train=clean, zeta_train=clean, X_val=None, zeta_val=None)
+    history = train_once(model, clean, clean, widths, epochs=epochs)
 
     passed, worst, _ = pixel_error_counts(model, clean)
     return {

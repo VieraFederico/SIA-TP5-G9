@@ -136,13 +136,21 @@ def resolve_labels(datatype: str) -> list[str]:
     return [chr(code) if code < 0x7f else "DEL" for code in range(0x60, 0x80)]
 
 
-def make_trainer(architecture: list[int], cost_name: str, seed : int | None = None):
-    """Trainer + función de costo, con los hiperparámetros fijos del TP."""
+def make_trainer(architecture: list[int], cost_name: str, seed: int | None = None, *,
+                 epochs: int | None = None, training_mode: str | None = None,
+                 optimizer=None):
+    """Trainer + función de costo, con los hiperparámetros del TP.
+
+    Los estudios pasan overrides (epochs/training_mode/optimizer) acá, en la
+    construcción, en vez de mutar trainer.cfg después de crearlo. None = usa el
+    default de config.json.
+    """
     bce = BinaryCrossEntropyCost()
-    adam = AdamOptimizer(learning_rate=LEARNING_RATE, beta1=ADAM_BETA1, beta2=ADAM_BETA2)
+    if optimizer is None:
+        optimizer = AdamOptimizer(learning_rate=LEARNING_RATE, beta1=ADAM_BETA1, beta2=ADAM_BETA2)
     trainer = Trainer(
         cost_fn=bce,
-        optimizer=adam,
+        optimizer=optimizer,
         metrics=[],
         cfg=ExperimentConfig(
             name="autoencoder_fonts",
@@ -159,13 +167,24 @@ def make_trainer(architecture: list[int], cost_name: str, seed : int | None = No
             cost_function=cost_name,
             optimizer="adam",
             eta=LEARNING_RATE,   # antes 0.01 (inerte/contradictorio, §4-I); ahora = learning_rate real
-            training_mode=TRAINING_MODE,
+            training_mode=TRAINING_MODE if training_mode is None else training_mode,
             batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
+            epochs=EPOCHS if epochs is None else epochs,
             epsilon=EPSILON,
         ),
     )
     return trainer, bce
+
+
+def train_once(model, X_train, zeta_train, architecture, cost_name="binary_cross_entropy", *,
+               seed=None, epochs=None, training_mode=None, optimizer=None,
+               X_val=None, zeta_val=None, noise_fn=None):
+    """Construye el trainer (con los overrides en la construcción, sin mutar cfg después),
+    entrena el modelo y devuelve el history. Lo usan los estudios para no tocar internals."""
+    trainer, _ = make_trainer(architecture, cost_name, seed=seed, epochs=epochs,
+                              training_mode=training_mode, optimizer=optimizer)
+    return trainer.fit(model=model, X_train=X_train, zeta_train=zeta_train,
+                       X_val=X_val, zeta_val=zeta_val, noise_fn=noise_fn)
 
 
 def run_experiment(

@@ -23,7 +23,7 @@ from evaluation import nearest_pattern_distance, pixel_errors_per_pattern
 from sampling import set_seed
 from experiment import (
     ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE,
-    make_activations, make_trainer, study_subtitle,
+    make_activations, study_subtitle, train_once,
 )
 from font import load_fonts
 from graphs.style import (
@@ -51,9 +51,7 @@ def train_vae(kl_weight, seed, epochs, x):
     act = make_activations()
     model = build_vae_model(act, seed=seed)
     model.kl_weight = kl_weight
-    trainer, _ = make_trainer(VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence")
-    trainer.cfg.epochs = epochs
-    trainer.fit(model=model, X_train=x, zeta_train=x, X_val=None, zeta_val=None)
+    train_once(model, x, x, VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence", epochs=epochs)
     return model
 
 
