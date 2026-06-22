@@ -12,13 +12,24 @@ class NeuronLayer:
     Guarda x, h y V durante el forward para usarlos en backprop.
     """
 
-    def __init__(self, n_inputs: int, n_neurons: int, activation: ActivationFunction, weight_initializator=None, rand_seed : int | None = None) -> None:
+    # Escala del init de pesos por esquema (en función de los inputs de la capa):
+    #   he      ~ N(0,1)·√(2/n_in)   va bien con ReLU
+    #   xavier  ~ N(0,1)·√(1/n_in)   para tanh/sigmoide
+    #   normal  ~ N(0,1)·0.1         normal chico
+    INIT_SCALES = {
+        "he":     lambda n_in: np.sqrt(2.0 / n_in),
+        "xavier": lambda n_in: np.sqrt(1.0 / n_in),
+        "normal": lambda n_in: 0.1,
+    }
+
+    def __init__(self, n_inputs: int, n_neurons: int, activation: ActivationFunction,
+                 init_scheme: str = "he", rand_seed: int | None = None) -> None:
         self.n_inputs = n_inputs
         self.n_neurons = n_neurons
         self.activation = activation
         rng = np.random.default_rng(rand_seed)
-        # self.weights = rng.standard_normal((n_inputs, n_neurons)) * np.sqrt(1.0 / n_inputs) # Xavier -> for tanh
-        self.weights = weight_initializator() if weight_initializator is not None else rng.standard_normal((n_inputs, n_neurons)) * np.sqrt(2.0 / n_inputs) # He -> for relu
+        scale = self.INIT_SCALES[init_scheme](n_inputs)
+        self.weights = rng.standard_normal((n_inputs, n_neurons)) * scale
         self.bias: Array = np.zeros(n_neurons)
         self._x: Array = np.empty(n_inputs)
         self._h: Array = np.empty(n_neurons)

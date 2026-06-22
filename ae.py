@@ -36,23 +36,26 @@ AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [2] + AE_ENCODER_WIDTHS[::-1]
 
 def build_ae_model(act: dict, seed: int | None = None,
                    encoder_widths: list[int] = AE_ENCODER_WIDTHS,
-                   hidden_act: str = "relu") -> Autoencoder:
+                   hidden_act: str = "relu", init_scheme: str = "he") -> Autoencoder:
     """Autoencoder con cuello de botella 2D.
 
     encoder_widths va de la entrada (35) a la capa que alimenta el bottleneck; el
     decoder espeja esos anchos y cierra con una sigmoide. Por defecto arma la
     topología del TP (35-30-25-20-16-8-4-2 y vuelta). El estudio de arquitectura
-    reusa esta misma función con otros anchos.
+    reusa esta misma función con otros anchos; el de hiperparámetros, con otro
+    init_scheme (he/xavier/normal).
     """
     hidden = act[hidden_act]
 
     encoder = MultilayerPerceptron(layers=[
-        NeuronLayer(encoder_widths[i], encoder_widths[i + 1], hidden, rand_seed=seed)
+        NeuronLayer(encoder_widths[i], encoder_widths[i + 1], hidden,
+                    init_scheme=init_scheme, rand_seed=seed)
         for i in range(len(encoder_widths) - 1)
     ])
 
     latent_space = MultilayerPerceptron(layers=[
-        NeuronLayer(encoder_widths[-1], 2, act["tanh"], rand_seed=seed),  # bottleneck 2D
+        NeuronLayer(encoder_widths[-1], 2, act["tanh"],
+                    init_scheme=init_scheme, rand_seed=seed),  # bottleneck 2D
     ])
 
     widths = [2] + encoder_widths[::-1]  # 2 -> ... -> 35
@@ -60,7 +63,7 @@ def build_ae_model(act: dict, seed: int | None = None,
         NeuronLayer(
             widths[i], widths[i + 1],
             act["logistic"] if i == len(widths) - 2 else hidden,  # sigmoide sólo en la salida
-            rand_seed=seed,
+            init_scheme=init_scheme, rand_seed=seed,
         )
         for i in range(len(widths) - 1)
     ])

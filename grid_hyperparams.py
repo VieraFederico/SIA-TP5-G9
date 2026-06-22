@@ -67,35 +67,12 @@ def make_optimizer(name, lr):
     return GradientDescent(lr)
 
 
-def apply_init(model, scheme, seed):
-    """Reinicia los pesos con el esquema elegido (lo hacemos acá porque NeuronLayer no
-    deja elegir el init por capa):
-
-        he      ~ N(0,1) * sqrt(2/n_in)   (el del repo, va bien con ReLU)
-        xavier  ~ N(0,1) * sqrt(1/n_in)
-        normal  ~ N(0,1) * 0.1
-    """
-    rng = np.random.default_rng(seed)
-    for mlp in (model.encoder, model.latent_space, model.decoder):
-        for layer in mlp.layers:
-            n_in, n_out = layer.n_inputs, layer.n_neurons
-            if scheme == "he":
-                scale = np.sqrt(2.0 / n_in)
-            elif scheme == "xavier":
-                scale = np.sqrt(1.0 / n_in)
-            else:  # normal
-                scale = 0.1
-            layer.weights = rng.standard_normal((n_in, n_out)) * scale
-            layer.bias = np.zeros(n_out)
-
-
 def run_cell(seed, clean, *, lr, mode, init, opt, act, epochs):
     """El AE fijo entrenado con un set concreto de hiperparámetros y una seed.
     Devuelve (pasan, peor_px)."""
     set_seed(seed)
 
-    model = build_ae_model(make_activations(), seed=seed, hidden_act=act)
-    apply_init(model, init, seed)
+    model = build_ae_model(make_activations(), seed=seed, hidden_act=act, init_scheme=init)
 
     train_once(model, clean, clean, AE_ARCHITECTURE,
                epochs=epochs, training_mode=mode, optimizer=make_optimizer(opt, lr))
