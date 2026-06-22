@@ -103,7 +103,7 @@ def main(argv=None):
 
     ax.set_title("Denoising: error de reconstrucción vs ruido de prueba")
     ax.set_xlabel("Nivel de ruido en la prueba (salt-and-pepper)")
-    ax.set_ylabel("Error promedio (píxeles mal, sobre 35)")
+    ax.set_ylabel("Error promedio (pixeles_malos / 35)")
     dark_grid(ax)
     leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM)
     for t in leg.get_texts():
