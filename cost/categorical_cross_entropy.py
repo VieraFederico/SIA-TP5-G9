@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.cost.cost import CostFunction
-from src.activation.activation import Array
+from cost.cost import CostFunction
+from activation.activation import Array
 
 
 class CategoricalCrossEntropyCost(CostFunction):

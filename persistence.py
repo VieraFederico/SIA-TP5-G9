@@ -2,8 +2,8 @@ import json
 import pathlib
 import numpy as np
 import dataclasses
-from src.config import ExperimentConfig
-from src.network.multilayer_perceptron import MultilayerPerceptron
+from config import ExperimentConfig
+from network.multilayer_perceptron import MultilayerPerceptron
 
 
 def save_run(

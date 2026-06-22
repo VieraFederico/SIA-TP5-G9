@@ -12,20 +12,17 @@ antes de importar pyplot en los submódulos.
 API pública:
     plot_latent_points(positions, labels, path, title)             # espacio latente AE
     plot_latent_distributions(means, stds, labels, path, ...)      # espacio latente VAE
-    plot_sample(row)                                               # dígito (imshow), legacy
     visualize_font(pattern, char_name)                             # ASCII a consola (def. en font.py)
 """
 import matplotlib
 matplotlib.use("Agg")
 
 from graphs.latent import plot_latent_distributions, plot_latent_points, plot_latent_with_generated
-from graphs.image import plot_sample
 from font import visualize_font  # se mantiene definido en font.py; acá sólo se re-exporta
 
 __all__ = [
     "plot_latent_points",
     "plot_latent_distributions",
-    "plot_sample",
     "visualize_font",
     "plot_latent_with_generated",
 ]

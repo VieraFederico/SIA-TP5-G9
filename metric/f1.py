@@ -1,6 +1,6 @@
-from src.metric.metric import Metric
-from src.metric.precision import PrecisionMetric
-from src.metric.recall import RecallMetric
+from metric.metric import Metric
+from metric.precision import PrecisionMetric
+from metric.recall import RecallMetric
 
 class F1Metric(Metric):
     """F1 = 2 · precision · recall / (precision + recall)"""

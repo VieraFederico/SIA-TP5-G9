@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.activation.activation import ActivationFunction, Array
+from activation.activation import ActivationFunction, Array
 
 
 class SoftMaxActivation(ActivationFunction):

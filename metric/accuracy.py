@@ -1,5 +1,5 @@
-from src.metric.metric import Metric
-from src.activation.activation import Array
+from metric.metric import Metric
+from activation.activation import Array
 
 
 class AccuracyMetric(Metric):
