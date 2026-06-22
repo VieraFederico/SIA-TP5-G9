@@ -71,7 +71,8 @@ def hyperparams_subtitle(hp: dict) -> str:
         "b1": ADAM_BETA1,
         "b2": ADAM_BETA2,
         "mode": TRAINING_MODE,
-        "eps": EPSILON,
+        "adam_eps": 1e-8,   # ε interno de Adam
+        "tol": EPSILON,     # criterio de corte por convergencia (no es el ε de Adam)
     }
     parts = []
     for key, value in full.items():

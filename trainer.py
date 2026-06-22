@@ -38,28 +38,34 @@ class Trainer:
             raise ValueError(f"training_mode desconocido: {self.cfg.training_mode!r}")
 
         train_errors, val_errors = [], []
-        best_val_error = float('inf')
+        best_loss = float('inf')
         best_weights = None
         strikes = 0
         use_val = X_val is not None and zeta_val is not None
 
         for epoch in range(self.cfg.epochs): # ← "for a fixed number of epochs" (Clase 11)
             X_epoch = noise_fn() if noise_fn is not None else X_train
-            train_errors.append(train_fn(model, X_epoch, zeta_train))
+            train_loss = train_fn(model, X_epoch, zeta_train)
+            train_errors.append(train_loss)
 
+            # Criterio de "mejor": validación si la hay, si no el train loss. Así el
+            # modelo devuelto es el mejor que tuvo, no el de la última época (red de
+            # seguridad ante el spike, que pega después de converger).
             if use_val:
-                val_error = self._evaluate_loss(model, X_val, zeta_val)
-                val_errors.append(val_error)
+                ref_loss = self._evaluate_loss(model, X_val, zeta_val)
+                val_errors.append(ref_loss)
+            else:
+                ref_loss = train_loss
 
-                if val_error < best_val_error:
-                    best_val_error = val_error
-                    best_weights = model.get_weights()  # save copy
-                    strikes = 0
-                else:
-                    strikes += 1
-                    if strikes >= self.patience:
-                        print(f"Early stopping at epoch {epoch}")
-                        break
+            if ref_loss < best_loss:
+                best_loss = ref_loss
+                best_weights = self._snapshot_weights(model)  # copia profunda
+                strikes = 0
+            elif use_val:
+                strikes += 1
+                if strikes >= self.patience:
+                    print(f"Early stopping at epoch {epoch}")
+                    break
 
             if train_errors[-1] < self.cfg.epsilon:
                 break
@@ -67,7 +73,16 @@ class Trainer:
         if best_weights is not None:
             model.set_weights(best_weights)
 
-        return {"train_error": train_errors, "val_error": val_errors, "epochs": epoch + 1} # ← "if E < ε: break"  (Clase 11)
+        return {"train_error": train_errors, "val_error": val_errors,
+                "epochs": epoch + 1, "best_loss": best_loss} # ← "if E < ε: break"  (Clase 11)
+
+    @staticmethod
+    def _snapshot_weights(model):
+        """Copia PROFUNDA de los pesos. get_weights() devuelve referencias a los
+        arrays vivos; sin copiar, un update posterior (o el spike) corrompería el
+        snapshot. np.array(..., copy=True) clona cada (W, b)."""
+        return [(np.array(w, copy=True), np.array(b, copy=True))
+                for w, b in model.get_weights()]
 
     def evaluate(self, model: Model, X: Array, zeta: Array) -> dict[str, float]:
         """Evaluación final — solo mide métricas, no toca los pesos."""
