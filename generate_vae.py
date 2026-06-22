@@ -27,7 +27,7 @@ from experiment import (
     output_path,
     SEED,
 )
-from graphs import visualize_font
+from graphs import visualize_font, plot_generated
 from weights_io import load_weights
 
 
@@ -170,6 +170,15 @@ def main(argv=None) -> None:
     output_file = output_dir / f"vae_generated_{tag}.npz"
     np.savez(output_file, generated=generated, latent_samples=latent_samples, sampling=tag)
     print(f"Generated samples saved to: {output_file}")
+
+    # El mosaico de la malla queda pospuesto; las muestras sueltas sí se renderizan.
+    if not args.grid:
+        image_file = plot_generated(
+            generated, latent_samples, str(output_dir / f"vae_generated_{tag}.png"),
+            title=f"{args.datatype.capitalize()}: muestras generadas (VAE) [{mode_desc}]",
+            subtitle=f"z ~ {mode_desc} · decode → emoji",
+        )
+        print(f"Generated images saved to: {image_file}")
 
     if args.plot:
         try:

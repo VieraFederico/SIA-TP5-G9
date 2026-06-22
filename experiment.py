@@ -19,6 +19,7 @@ from config import ExperimentConfig, load_config
 from cost.binary_cross_entropy import BinaryCrossEntropyCost
 from evaluation import pixel_error_report
 from font import load_fonts, EMOJI_LABEL_NAMES
+from graphs import plot_loss_curve, plot_reconstructions, plot_triptych
 from noise.salt_n_pepper import SaltNPepperNoise
 from optimizer.adam import AdamOptimizer
 from trainer import Trainer
@@ -243,5 +244,30 @@ def run_experiment(
         labels=labels,
         reconstruct=reconstruct,
     )
+
+    # Figuras de presentación: imágenes (no ASCII) sobre lo que ya se calculó.
+    subtitle = hyperparams_subtitle(hp)
+    present = lambda name: output_path(model_type, "presentation", hp, name)
+
+    recon_file = plot_reconstructions(
+        clean, reconstructed, labels, present("reconstructions.png"),
+        title=f"{plot_title}: entrada vs reconstrucción", subtitle=subtitle,
+    )
+    print(f"Reconstructions plot saved to: {recon_file}")
+
+    if history.get("train_error"):
+        loss_file = plot_loss_curve(
+            history, present("loss.png"),
+            title=f"{plot_title}: curva de loss", subtitle=subtitle,
+        )
+        print(f"Loss curve saved to: {loss_file}")
+
+    # Tríptico sólo cuando hay denoising (la entrada difiere del patrón limpio).
+    if not np.array_equal(np.asarray(clean), np.asarray(x_input)):
+        tript_file = plot_triptych(
+            clean, x_input, reconstructed, labels, present("denoising_triptych.png"),
+            title=f"{plot_title}: limpio / ruidoso / reconstruido", subtitle=subtitle,
+        )
+        print(f"Denoising triptych saved to: {tript_file}")
 
     return {"history": history, "reconstructed": reconstructed, "recon_bce": recon_bce}

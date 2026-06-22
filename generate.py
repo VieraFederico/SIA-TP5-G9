@@ -15,7 +15,7 @@ import numpy as np
 
 from ae import build_ae_model
 from experiment import make_activations, resolve_labels, output_path, hyperparams_slug, hyperparams_subtitle
-from graphs import visualize_font, plot_latent_with_generated
+from graphs import visualize_font, plot_latent_with_generated, plot_generated
 from weights_io import load_weights
 
 
@@ -143,6 +143,13 @@ def main(argv=None) -> None:
     output_file = output_dir / "generated_samples.npz"
     np.savez(output_file, generated=generated, latent_samples=latent_samples)
     print(f"\nGenerated samples saved to: {output_file}")
+
+    image_file = plot_generated(
+        generated, latent_samples, str(output_dir / "generated_samples.png"),
+        title=f"{args.datatype.capitalize()}: muestras generadas (AE)",
+        subtitle=f"z muestreado del latente ({args.sampling_method}) · decode → patrón",
+    )
+    print(f"Generated images saved to: {image_file}")
 
     # Generate plot if requested
     if args.plot:
