@@ -20,6 +20,7 @@ from src.utils.sampling import set_seed
 from src.utils.config import ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE
 from experiments.experiment import make_activations, study_subtitle, train_once
 from src.data.font import load_fonts
+from src.noise.salt_n_pepper import SaltNPepperNoise
 from graphs.studies import bar_study, overlaid_curves
 from graphs.style import BLUE, ORANGE
 
@@ -33,27 +34,53 @@ ARCHITECTURES = {
 }
 
 
-def run_seed(widths, hidden_act, seed, epochs, clean):
-    """Entrena una arquitectura con una seed. Devuelve sus métricas y la curva de loss."""
+def run_seed(widths, hidden_act, seed, epochs, clean, *, with_noise=False, salt=0.0):
+    """Entrena una arquitectura con una seed. Devuelve sus métricas y la curva de loss.
+
+    Único punto que cambia entre el estudio del AE y el del DAE: si with_noise, la
+    entrada se corrompe con salt-and-pepper y el ruido se RE-SAMPLEA por época
+    (noise_fn), pero el objetivo y la EVALUACIÓN son siempre contra el patrón LIMPIO.
+    Para evaluar el DAE se usa una realización de ruido NUEVA (stream seed+1000),
+    nunca la de entrenamiento; el AE evalúa sobre el patrón limpio (entrada=objetivo).
+    """
     set_seed(seed)
 
     model = build_ae_model(make_activations(), seed=seed,
                            encoder_widths=widths, hidden_act=hidden_act)
 
-    history = train_once(model, clean, clean, widths, epochs=epochs)
+    if with_noise:
+        x_input = SaltNPepperNoise(salt).add_noise(clean.copy())
+        noise_fn = lambda: SaltNPepperNoise(salt).add_noise(clean.copy())
+    else:
+        x_input, noise_fn = clean, None
 
-    passed, worst, _ = pixel_error_counts(model, clean)
+    history = train_once(model, x_input, clean, widths, epochs=epochs, noise_fn=noise_fn)
+
+    if with_noise:
+        set_seed(seed + 1000)  # stream de evaluación, ruido NUEVO (no el de entrenamiento)
+        x_eval = SaltNPepperNoise(salt).add_noise(clean.copy())
+    else:
+        x_eval = clean
+    # Error SIEMPRE contra clean (X_target=clean); la entrada al modelo es x_eval.
+    passed, worst, mean_px = pixel_error_counts(model, clean, X_input=x_eval)
     return {
         "pass": passed,
         "worst": worst,
+        "mean": mean_px,
         "epochs": history["epochs"],
         "loss_curve": history["train_error"],
     }
 
 
-def run_architecture(widths, hidden_act, base_seed, n_seeds, epochs, clean):
-    """Corre la arquitectura con n_seeds semillas y resume media ± desvío."""
-    runs = [run_seed(widths, hidden_act, base_seed + k, epochs, clean) for k in range(n_seeds)]
+def run_architecture(widths, hidden_act, base_seed, n_seeds, epochs, clean, *,
+                     with_noise=False, salt=0.0):
+    """Corre la arquitectura con n_seeds semillas y resume media ± desvío.
+
+    with_noise/salt se pasan tal cual a run_seed: el estudio del AE los deja en su
+    default (sin ruido) y el del DAE los activa. Es la MISMA función para ambos.
+    """
+    runs = [run_seed(widths, hidden_act, base_seed + k, epochs, clean,
+                     with_noise=with_noise, salt=salt) for k in range(n_seeds)]
     col = lambda key: np.array([r[key] for r in runs], dtype=float)
 
     return {
@@ -61,6 +88,8 @@ def run_architecture(widths, hidden_act, base_seed, n_seeds, epochs, clean):
         "pass_std": col("pass").std(),
         "worst_mean": col("worst").mean(),
         "worst_std": col("worst").std(),
+        "mean_mean": col("mean").mean(),    # error medio de píxel (vs limpio), eje del DAE
+        "mean_std": col("mean").std(),
         "epochs_mean": col("epochs").mean(),
         "reaches": col("worst").mean() <= 1.0,
         "loss_curve": runs[0]["loss_curve"],

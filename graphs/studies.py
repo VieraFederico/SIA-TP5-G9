@@ -40,8 +40,40 @@ def bar_study(labels, means, stds, ylabel, title, path,
     return save_dark(fig, path)
 
 
-def overlaid_curves(series, xlabel, ylabel, title, path, subtitle=None, logy=False):
-    """Varias curvas en un mismo eje. series = [(etiqueta, valores_y), ...]."""
+def grouped_bar_study(labels, series, ylabel, title, path,
+                      subtitle=None, target=None, target_label=None, rotate=0, ylim=None):
+    """Barras AGRUPADAS: varias series por categoría, lado a lado, con barra de error.
+
+    series = [(nombre, means, stds, color), ...]. Pensado para comparar las dos
+    series de ruido del DAE (salt 0.1 / 0.2) sobre el mismo eje y escala. ylim fija
+    la escala vertical para que las dos series se lean comparables.
+    """
+    x = np.arange(len(labels))
+    n = max(len(series), 1)
+    width = 0.8 / n
+    fig, ax = dark_figure(figsize=(10, 6) if rotate else (9, 5.5))
+    for i, (name, means, stds, color) in enumerate(series):
+        offset = (i - (n - 1) / 2) * width
+        ax.bar(x + offset, means, width, yerr=stds, capsize=3, color=color, label=name)
+    if target is not None:
+        ax.axhline(target, color=RED, linestyle="--", linewidth=1, label=target_label)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=rotate, ha="right" if rotate else "center", fontsize=8)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    _legend(ax)
+    dark_grid(ax)
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, path)
+
+
+def overlaid_curves(series, xlabel, ylabel, title, path, subtitle=None, logy=False, ylim=None):
+    """Varias curvas en un mismo eje. series = [(etiqueta, valores_y), ...].
+
+    ylim opcional fija la escala vertical (útil para comparar figuras hermanas, p.ej.
+    convergencia a salt=0.1 vs salt=0.2 con la misma escala)."""
     fig, ax = dark_figure(figsize=(10, 6))
     draw = ax.semilogy if logy else ax.plot
     for i, (label, ys) in enumerate(series):
@@ -49,6 +81,8 @@ def overlaid_curves(series, xlabel, ylabel, title, path, subtitle=None, logy=Fal
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+    if ylim is not None:
+        ax.set_ylim(ylim)
     _legend(ax)
     dark_grid(ax)
     add_subtitle(fig, subtitle)

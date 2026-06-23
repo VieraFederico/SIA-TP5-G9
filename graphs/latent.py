@@ -13,7 +13,7 @@ from matplotlib.patches import Ellipse
 
 from src.activation.activation import Array
 from graphs.style import (
-    BLACK, BLUE, FG, FG_DIM, ORANGE, RED,
+    BLACK, BLUE, CYAN, FG, FG_DIM, ORANGE, RED,
     add_subtitle, dark_figure, dark_grid, dark_legend, save_dark,
 )
 
@@ -86,7 +86,9 @@ def plot_latent_points(
         raise ValueError(f"Expected 2D latent space, got shape {positions.shape}")
 
     fig, ax = dark_figure(figsize=(8, 6))
-    ax.scatter(positions[:, 0], positions[:, 1], color=BLUE)
+    # Cyan brillante con borde oscuro: alto contraste sobre el fondo negro.
+    ax.scatter(positions[:, 0], positions[:, 1], s=70, color=CYAN,
+               edgecolors=BLACK, linewidths=0.6, zorder=3)
     _annotate(ax, labels, positions)
 
     ax.set_title(title)

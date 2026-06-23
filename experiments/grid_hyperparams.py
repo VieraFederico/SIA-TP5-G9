@@ -31,6 +31,7 @@ from src.utils.sampling import set_seed
 from src.utils.config import ADAM_BETA1, ADAM_BETA2, EPSILON, LEARNING_RATE, TRAINING_MODE
 from experiments.experiment import hyperparams_slug, make_activations, study_subtitle, train_once
 from src.data.font import load_fonts
+from src.noise.salt_n_pepper import SaltNPepperNoise
 from graphs.studies import bar_study
 from src.optimizer.adam import AdamOptimizer
 from src.optimizer.gradient_descent import GradientDescent
@@ -65,35 +66,59 @@ def make_optimizer(name, lr):
     return GradientDescent(lr)
 
 
-def run_cell(seed, clean, *, lr, mode, init, opt, act, epochs):
+def run_cell(seed, clean, *, lr, mode, init, opt, act, epochs, with_noise=False, salt=0.0):
     """El AE fijo entrenado con un set concreto de hiperparámetros y una seed.
-    Devuelve (pasan, peor_px)."""
+    Devuelve (pasan, peor_px, error_medio_px).
+
+    Único punto que cambia entre el estudio del AE y el del DAE: si with_noise, la
+    entrada se corrompe (salt-and-pepper, ruido RE-SAMPLEADO por época) y el objetivo
+    + la evaluación son contra el patrón LIMPIO. El DAE evalúa con ruido NUEVO
+    (stream seed+1000); el AE evalúa sobre el limpio (entrada=objetivo)."""
     set_seed(seed)
 
     model = build_ae_model(make_activations(), seed=seed, hidden_act=act, init_scheme=init)
 
-    train_once(model, clean, clean, AE_ARCHITECTURE,
-               epochs=epochs, training_mode=mode, optimizer=make_optimizer(opt, lr))
+    if with_noise:
+        x_input = SaltNPepperNoise(salt).add_noise(clean.copy())
+        noise_fn = lambda: SaltNPepperNoise(salt).add_noise(clean.copy())
+    else:
+        x_input, noise_fn = clean, None
 
-    passed, worst, _ = pixel_error_counts(model, clean)
-    return passed, worst
+    train_once(model, x_input, clean, AE_ARCHITECTURE,
+               epochs=epochs, training_mode=mode, optimizer=make_optimizer(opt, lr),
+               noise_fn=noise_fn)
+
+    if with_noise:
+        set_seed(seed + 1000)  # stream de evaluación, ruido NUEVO
+        x_eval = SaltNPepperNoise(salt).add_noise(clean.copy())
+    else:
+        x_eval = clean
+    # Error SIEMPRE contra clean (X_target=clean); la entrada al modelo es x_eval.
+    return pixel_error_counts(model, clean, X_input=x_eval)
 
 
 def sweep_axis(levels, cell, base_seed, n_seeds):
-    """Para cada valor del eje corre n_seeds celdas y resume media ± desvío de los que pasan.
-    cell(value, seed) -> (pasan, peor_px)."""
-    pass_mean, pass_std = [], []
+    """Para cada valor del eje corre n_seeds celdas y resume media ± desvío.
+    cell(value, seed) -> (pasan, peor_px, error_medio_px).
+
+    Devuelve un dict con las series media/σ de las tres métricas: el estudio del AE
+    grafica 'pass' (cuántos <=1px) y el del DAE 'mean' (error medio vs limpio)."""
+    stats = {k: [] for k in
+             ("pass_mean", "pass_std", "worst_mean", "worst_std", "mean_mean", "mean_std")}
     for v in levels:
         runs = [cell(v, base_seed + k) for k in range(n_seeds)]
-        passed = np.array([p for p, _ in runs], dtype=float)
-        worst = np.array([w for _, w in runs], dtype=float)
+        passed = np.array([r[0] for r in runs], dtype=float)
+        worst = np.array([r[1] for r in runs], dtype=float)
+        mean_px = np.array([r[2] for r in runs], dtype=float)
 
-        pass_mean.append(passed.mean())
-        pass_std.append(passed.std())
+        stats["pass_mean"].append(passed.mean());  stats["pass_std"].append(passed.std())
+        stats["worst_mean"].append(worst.mean());  stats["worst_std"].append(worst.std())
+        stats["mean_mean"].append(mean_px.mean()); stats["mean_std"].append(mean_px.std())
         print(f"    {str(v):>10}: pasan {passed.mean():4.1f}±{passed.std():3.1f}/32  "
-              f"peor {worst.mean():4.1f}±{worst.std():3.1f} px")
+              f"peor {worst.mean():4.1f}±{worst.std():3.1f} px  "
+              f"medio {mean_px.mean():4.2f}±{mean_px.std():.2f} px")
 
-    return pass_mean, pass_std
+    return stats
 
 
 def defaults_for(args):
@@ -119,7 +144,7 @@ def study_axis(axis, args, clean, outdir):
     print(f"Eje {title}:")
     defaults = defaults_for(args)
     cell = lambda value, seed: run_cell(seed, clean, **{**defaults, axis: value})
-    pass_mean, pass_std = sweep_axis(levels, cell, args.seed, args.seeds)
+    stats = sweep_axis(levels, cell, args.seed, args.seeds)
 
     folder = combo_dir(outdir, axis, defaults, args)
     subtitle = study_subtitle(
@@ -128,7 +153,7 @@ def study_axis(axis, args, clean, outdir):
         varied=axis,
     )
     bar_study(
-        [str(v) for v in levels], pass_mean, pass_std,
+        [str(v) for v in levels], stats["pass_mean"], stats["pass_std"],
         "Patrones con <= 1 px (de 32)", f"Hiperparámetro: {title}",
         str(folder / f"hp_{axis}.png"), subtitle=subtitle,
         target=32, target_label="objetivo: 32/32",

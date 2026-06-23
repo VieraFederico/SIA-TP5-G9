@@ -9,7 +9,7 @@ interfaz pública.
     python main.py vae      [--data emoji|letters]  [--noise/--no-noise] [--load P] [--save] [--kl W]
     python main.py generate {ae|vae}  --weights P [flags del generador]
     python main.py plot     latent    --weights P [flags del plot]
-    python main.py study    {architecture|hyperparams|denoising|kl} [flags del estudio]
+    python main.py study    {architecture|hyperparams|denoising|kl|architecture-dae|hyperparams-dae} [flags del estudio]
 
 Ejemplos:
     python main.py ae                      # autoencoder sobre letras, con ruido (DAE)
@@ -105,7 +105,9 @@ def build_parser() -> argparse.ArgumentParser:
     # estudio (--epochs, --seeds, --axis, ...) se pasan tal cual al script.
     study = subparsers.add_parser("study", help="estudios comparativos / grid search")
     study.add_argument(
-        "kind", choices=["architecture", "hyperparams", "denoising", "kl"],
+        "kind",
+        choices=["architecture", "hyperparams", "denoising", "kl",
+                 "architecture-dae", "hyperparams-dae"],
         help="qué estudio correr",
     )
     study.add_argument(
@@ -123,6 +125,8 @@ _STUDIES = {
     "hyperparams": "experiments.grid_hyperparams",
     "denoising": "experiments.sweep_denoising",
     "kl": "experiments.sweep_kl",
+    "architecture-dae": "experiments.architecture_dae",
+    "hyperparams-dae": "experiments.hyperparams_dae",
 }
 _GENERATORS = {"ae": "experiments.generate", "vae": "experiments.generate_vae"}
 _PLOTS = {"latent": "experiments.plot_latent_combined"}

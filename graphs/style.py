@@ -10,7 +10,8 @@ GRID = "#262b36"       # grilla
 MUTED = "#8b94a6"      # subtítulo de hiperparámetros (gris legible sobre negro)
 
 # Paleta de datos (dark mode)
-BLUE = "#4aa3ff"       # puntos latentes / samples
+BLUE = "#4aa3ff"       # samples / curvas
+CYAN = "#2ee6d6"       # puntos latentes del AE (alto contraste sobre negro)
 ORANGE = "#ffb454"     # elipses 1σ
 RED = "#ff6b6b"        # medias μ
 IMSHOW_CMAP = "magma"  # mapa de color para imágenes (queda bien sobre negro)

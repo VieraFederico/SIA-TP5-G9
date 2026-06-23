@@ -192,6 +192,10 @@ def _menu_study(cfg):
                            description="varía profundidad/ancho del encoder (bottleneck fijo en 2)"),
         questionary.Choice("Hiperparámetros", "hyperparams",
                            description="arquitectura fija; barre learning rate / modo / init"),
+        questionary.Choice("Arquitectura (DAE)", "architecture-dae",
+                           description="igual que arquitectura pero en denoising; series salt 0.1 y 0.2, error vs limpio"),
+        questionary.Choice("Hiperparámetros (DAE)", "hyperparams-dae",
+                           description="igual que hiperparámetros pero en denoising; series salt 0.1 y 0.2, error vs limpio"),
         questionary.Choice("Barrido KL (β-VAE)", "kl",
                            description="VAE: trade-off reconstrucción vs generación según kl_weight"),
         questionary.Choice("Barrido denoising", "denoising",
@@ -201,7 +205,7 @@ def _menu_study(cfg):
     seeds = _ask(_text("Seeds por celda:", default="3"))
     argv = ["study", kind, "--epochs", epochs, "--seeds", seeds]
 
-    if kind == "hyperparams":
+    if kind in ("hyperparams", "hyperparams-dae"):
         argv += ["--axis", _ask(_select(
             "Eje:", choices=["all", "lr", "mode", "init", "opt", "act", "epochs"]))]
     if kind == "denoising":
