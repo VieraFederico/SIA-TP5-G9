@@ -25,18 +25,19 @@ from experiments.experiment import (
     run_experiment,
 )
 
-# Encoder del VAE = ganador del estudio de arquitectura AE ("deep 35-30-20-10-2").
+# Encoder del VAE = arquitectura deep del AE.
 # El decoder lo espeja. KL_WEIGHT (β del VAE) sale de config.json vía experiment.
 VAE_ENCODER_WIDTHS = [35, 30, 20, 10]
 VAE_ARCHITECTURE = (
     VAE_ENCODER_WIDTHS + [LATENT_DIM] + VAE_ENCODER_WIDTHS[::-1]
 )  # 35-30-20-10-2-10-20-30-35
+VAE_ARCH_LABEL = "-".join(map(str, VAE_ENCODER_WIDTHS + [LATENT_DIM]))
 
 
 def build_vae_model(act: dict, seed: int | None = None) -> VariationalAutoencoder:
     """encoder (35->10) + cabezas μ y logσ² (10->2 identity) + decoder (2->35).
 
-    Topología = ganador del estudio de arquitectura AE; el decoder espeja el encoder."""
+    Topología canónica del AE; el decoder espeja el encoder."""
     widths = VAE_ENCODER_WIDTHS
     encoder = MultilayerPerceptron(layers=[
         NeuronLayer(n_inputs=widths[i], n_neurons=widths[i + 1], activation=act["relu"], rand_seed=seed)
@@ -106,6 +107,7 @@ def run_vae(
 
     hp = {
         "data": datatype,
+        "arch": VAE_ARCH_LABEL,
         "noise": with_noise,
         "salt": SALT_P if with_noise else None,
         "epochs": n_epochs,

@@ -96,8 +96,8 @@ flag los overridea por corrida.
 **`plot latent`**: `--weights P` · `--data` · `--sampling normal|bounds` · `--seed` · `--output`.
 
 **`study`**: `--epochs` (presupuesto del grid, default 2000), `--seeds` (corridas por celda → banda media ± σ), `--seed`, `--data`.
-- `hyperparams` / `hyperparams-dae`: grid cruzado `opt × lr × init` con flags `--opts adam,gd` · `--lrs 1e-4,…,1e-2` · `--inits he,xavier,normal` · `--smoke` (defaults chicos). El `-dae` agrega `--salts 0.1,0.2`.
-- `architecture` / `architecture-dae`: barren la lista de arquitecturas (HP fijos); flags `--hidden-act relu|tanh` · `--smoke`. El `-dae` agrega `--salts 0.1,0.2`.
+- `hyperparams` / `hyperparams-dae`: grid cruzado `opt × lr × init` con flags `--opts adam,gd` · `--lrs 1e-4,…,1e-2` · `--inits he,xavier,normal` · `--smoke` (defaults chicos). El `-dae` usa salt `0.1` por default y permite override con `--salts`.
+- `architecture` / `architecture-dae`: barren la lista de arquitecturas (HP fijos); flags `--hidden-act relu|tanh` · `--smoke`. El `-dae` usa salt `0.1` por default y permite override con `--salts`.
 - `denoising` agrega `--realizations`; `kl` agrega `--gen-samples`.
 
 ---
@@ -120,7 +120,7 @@ de NumPy por capa (`layer_0_w`, `layer_0_b`, …). `output/` no se versiona.
 Cada estudio de grid (`architecture`, `hyperparams`, y sus `-dae`) deja bajo su `<slug>`:
 `raw.csv` (una fila por combinación × [salt] × seed, fuente reproducible), `summary.csv`
 (una por combinación con `rank` y marca `best`/`tie`), tabla(s) de ranking PNG, barras
-(DAE: dos series por salt), `loss/combo_NN.png` por combinación + `top10_overlay.png`.
+(DAE: una serie por salt configurado), `loss/combo_NN.png` por combinación + `top10_overlay.png`.
 
 ---
 
@@ -158,9 +158,9 @@ canta ganador) y plotean tablas/barras/curvas de loss.
 
 ```bash
 python3 main.py study hyperparams           # grid cruzado opt×lr×init (30 combos), AE puro
-python3 main.py study hyperparams-dae        # idem en denoising, × salt 0.1/0.2 (60 celdas)
+python3 main.py study hyperparams-dae        # idem en denoising, salt 0.1 por default
 python3 main.py study architecture           # lista de arquitecturas (bottleneck fijo 2), AE puro
-python3 main.py study architecture-dae       # idem en denoising, dos series salt 0.1/0.2
+python3 main.py study architecture-dae       # idem en denoising, salt 0.1 por default
 python3 main.py study hyperparams --smoke     # validación rápida del pipeline (épocas/seeds bajas)
 python3 main.py study denoising              # DAE: error de reconstrucción vs nivel de ruido
 python3 main.py study kl                     # VAE: trade-off reconstrucción vs generación según kl_weight
@@ -189,7 +189,7 @@ python3 main.py study kl                     # VAE: trade-off reconstrucción vs
 │   ├── generate.py  generate_vae.py  plot_latent_combined.py
 │   ├── study_engine.py  study_selection.py        # motor + criterio compartidos por los 4 estudios de grid
 │   ├── grid_architecture.py  grid_hyperparams.py  # AE: arquitectura / hiperparámetros
-│   ├── architecture_dae.py   hyperparams_dae.py   # DAE: idem en denoising (salt 0.1/0.2)
+│   ├── architecture_dae.py   hyperparams_dae.py   # DAE: idem en denoising (salt 0.1 default)
 │   └── sweep_denoising.py  sweep_kl.py
 ├── src/                    # librería reutilizable
 │   ├── network/ activation/ cost/ optimizer/ noise/ metric/   # núcleo numérico

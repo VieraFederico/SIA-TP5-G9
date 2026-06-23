@@ -14,9 +14,6 @@ from graphs.style import (
 # Colores para curvas superpuestas (legibles sobre negro).
 PALETTE = [BLUE, ORANGE, RED, "#7ee787", "#c78bff", "#ffd866"]
 
-GREEN = "#3fb950"          # seleccionado por el criterio
-TOP_TINT = "#10202b"       # fondo tenue del TOP-N en las tablas
-SEL_TINT = "#16331a"       # fondo del seleccionado en las tablas
 HEADER_BG = "#11151c"
 
 
@@ -78,13 +75,11 @@ def ranked_bar_study(labels, means, stds, ylabel, title, path,
                      subtitle=None, selected_idx=None, top_n=10, rotate=0, ylim=None):
     """Barras de error medio (ya ordenadas mejor→peor por el caller) con banda de σ.
 
-    Resalta el TOP-N (azul fuerte) y marca el seleccionado en verde. selected_idx es
-    el índice (0-based) en la lista ya ordenada."""
+    No marca ganador ni TOP-N: la elección final queda para el análisis manual.
+    selected_idx/top_n quedan sólo por compatibilidad con callers viejos."""
     x = np.arange(len(labels))
     fig, ax = dark_figure(figsize=(11, 5.5))
-    colors = [BLUE if i < top_n else FG_DIM for i in range(len(labels))]
-    if selected_idx is not None and 0 <= selected_idx < len(colors):
-        colors[selected_idx] = GREEN
+    colors = [BLUE for _ in labels]
     ax.bar(x, means, yerr=stds, capsize=3, color=colors)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=rotate, ha="right" if rotate else "center", fontsize=8)
@@ -97,12 +92,30 @@ def ranked_bar_study(labels, means, stds, ylabel, title, path,
     return save_dark(fig, path)
 
 
+def _moving_average(values, window):
+    """Media móvil centrada; usa padding de borde para no acortar la curva."""
+    y = np.asarray(values, dtype=float)
+    if window is None or window <= 1 or len(y) < 3:
+        return y
+    w = min(int(window), len(y))
+    if w % 2 == 0:
+        w -= 1
+    if w <= 1:
+        return y
+    left = w // 2
+    right = w - 1 - left
+    padded = np.pad(y, (left, right), mode="edge")
+    kernel = np.ones(w, dtype=float) / w
+    return np.convolve(padded, kernel, mode="valid")
+
+
 def loss_band_curve(curves, title, path, subtitle=None, logy=True, ylim=None,
-                    label=None, color=None):
+                    label=None, color=None, smooth_window=None):
     """Curva de loss media ± σ entre seeds para UNA combinación.
 
     curves = lista de curvas por seed (longitudes posiblemente distintas: se trunca a
-    la más corta). Banda sombreada = ± σ entre seeds."""
+    la más corta). Banda sombreada = ± σ entre seeds. Si smooth_window está activo,
+    la media cruda queda tenue y la media móvil se dibuja encima."""
     curves = [list(c) for c in curves if c is not None and len(c) > 0]
     fig, ax = dark_figure(figsize=(8, 5))
     if curves:
@@ -111,7 +124,13 @@ def loss_band_curve(curves, title, path, subtitle=None, logy=True, ylim=None,
         mean, std = mat.mean(axis=0), mat.std(axis=0)
         x = np.arange(length)
         col = color or BLUE
-        (ax.semilogy if logy else ax.plot)(x, mean, color=col, linewidth=1.4, label=label)
+        draw = ax.semilogy if logy else ax.plot
+        smoothed = _moving_average(mean, smooth_window)
+        if smooth_window and smooth_window > 1:
+            draw(x, mean, color=col, linewidth=0.7, alpha=0.25)
+            draw(x, smoothed, color=col, linewidth=1.8, label=label)
+        else:
+            draw(x, mean, color=col, linewidth=1.4, label=label)
         ax.fill_between(x, np.clip(mean - std, 1e-12, None), mean + std,
                         color=col, alpha=0.2, linewidth=0)
     ax.set_xlabel("Época")
@@ -130,9 +149,8 @@ def table_figure(headers, rows, title, path, subtitle=None,
                  selected_ids=None, top_n=10, id_col=0):
     """Tabla de presentación (PNG), filas ya ordenadas por el criterio (rank asc).
 
-    Resalta el TOP-N y marca en verde la(s) fila(s) cuyo id (columna id_col) está en
-    selected_ids. rows = lista de listas de strings."""
-    selected_ids = {str(s) for s in (selected_ids or [])}
+    No marca ganador ni TOP-N: la elección final queda para el análisis manual.
+    selected_ids/top_n/id_col quedan por compatibilidad con callers viejos."""
     n = len(rows)
     fig_h = max(2.2, 0.4 * (n + 1) + 1.0)
     fig, ax = dark_figure(figsize=(11, fig_h))
@@ -153,28 +171,28 @@ def table_figure(headers, rows, title, path, subtitle=None,
             text.set_weight("bold")
             continue
         # r>=1 son filas de datos (1-based porque la 0 es el header).
-        rid = rows[r - 1][id_col]
-        if rid in selected_ids:
-            cell.set_facecolor(SEL_TINT)
-        elif r <= top_n:
-            cell.set_facecolor(TOP_TINT)
-        else:
-            cell.set_facecolor(BLACK)
+        cell.set_facecolor(BLACK)
         text.set_color(FG)
 
     add_subtitle(fig, subtitle)
     return save_dark(fig, path)
 
 
-def overlaid_curves(series, xlabel, ylabel, title, path, subtitle=None, logy=False, ylim=None):
+def overlaid_curves(series, xlabel, ylabel, title, path, subtitle=None, logy=False, ylim=None,
+                    smooth_window=None, show_raw=False):
     """Varias curvas en un mismo eje. series = [(etiqueta, valores_y), ...].
 
     ylim opcional fija la escala vertical (útil para comparar figuras hermanas, p.ej.
-    convergencia a salt=0.1 vs salt=0.2 con la misma escala)."""
+    convergencia a salt=0.1 vs salt=0.2 con la misma escala). Si smooth_window está
+    activo, se dibuja la media móvil; show_raw agrega la curva original tenue."""
     fig, ax = dark_figure(figsize=(10, 6))
     draw = ax.semilogy if logy else ax.plot
     for i, (label, ys) in enumerate(series):
-        draw(ys, label=label, color=PALETTE[i % len(PALETTE)], linewidth=1.4)
+        color = PALETTE[i % len(PALETTE)]
+        y = np.asarray(ys, dtype=float)
+        if show_raw and smooth_window and smooth_window > 1:
+            draw(y, color=color, linewidth=0.6, alpha=0.22)
+        draw(_moving_average(y, smooth_window), label=label, color=color, linewidth=1.6)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)

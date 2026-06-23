@@ -30,13 +30,13 @@ from experiments.experiment import (
 
 # Anchos del encoder, de la entrada (35) a la capa que alimenta el bottleneck.
 # El decoder los espeja; *_ARCHITECTURE es la lista completa (para el log).
-# Arquitecturas elegidas por el estudio de arquitectura (study architecture / -dae):
-#   AE  -> ganador "deep 35-30-20-10-2" (combo #4, rank 1).
-#   DAE -> ganador "deep 35-30-20-10-2" (combo #4) también.
+# Arquitecturas canónicas elegidas para los experimentos.
 AE_ENCODER_WIDTHS = [35, 30, 20, 10]
 DAE_ENCODER_WIDTHS = [35, 30, 20, 10]
 AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [LATENT_DIM] + AE_ENCODER_WIDTHS[::-1]
 DAE_ARCHITECTURE = DAE_ENCODER_WIDTHS + [LATENT_DIM] + DAE_ENCODER_WIDTHS[::-1]
+AE_ARCH_LABEL = "-".join(map(str, AE_ENCODER_WIDTHS + [LATENT_DIM]))
+DAE_ARCH_LABEL = "-".join(map(str, DAE_ENCODER_WIDTHS + [LATENT_DIM]))
 
 
 def build_ae_model(act: dict, seed: int | None = None,
@@ -46,7 +46,7 @@ def build_ae_model(act: dict, seed: int | None = None,
 
     encoder_widths va de la entrada (35) a la capa que alimenta el bottleneck; el
     decoder espeja esos anchos y cierra con una sigmoide. Por defecto arma la
-    topología del TP (35-30-25-20-16-8-4-2 y vuelta). El estudio de arquitectura
+    topología AE canónica (35-30-20-10-2 y vuelta). El estudio de arquitectura
     reusa esta misma función con otros anchos; el de hiperparámetros, con otro
     init_scheme (he/xavier/normal).
     """
@@ -104,8 +104,7 @@ def run_ae(
 
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise, salt_p)
-    # Config canónica (de los estudios): AE puro y DAE comparten arquitectura ganadora
-    # (deep 35-30-20-10-2), pero el DAE usa su propio lr (0.01, ganador hiperparams-DAE).
+    # Config canónica: AE puro y DAE pueden tener arquitecturas y learning rates distintos.
     encoder_widths = DAE_ENCODER_WIDTHS if with_noise else AE_ENCODER_WIDTHS
     architecture = DAE_ARCHITECTURE if with_noise else AE_ARCHITECTURE
     lr = DAE_LEARNING_RATE if with_noise else LEARNING_RATE
@@ -129,6 +128,7 @@ def run_ae(
 
     hp = {
         "data": datatype,
+        "arch": DAE_ARCH_LABEL if with_noise else AE_ARCH_LABEL,
         "noise": with_noise,
         "salt": salt_p if with_noise else None,
         "resample": resample_noise if with_noise else None,

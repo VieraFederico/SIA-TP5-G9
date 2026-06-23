@@ -49,6 +49,7 @@ SUMMARY_COLUMNS = [
 ]
 
 SALT_COLORS = {0.1: BLUE, 0.2: ORANGE}
+DAE_LOSS_SMOOTH_WINDOW = 101
 
 
 def make_optimizer(name, lr):
@@ -172,8 +173,7 @@ def _plot_tables(kind, ranked, best_id, outdir, subtitle, salt_suffix):
                  f"{r['mean_mean']:.2f} ± {r['mean_std']:.2f}", f"{r['worst_mean']:.1f}",
                  f"{r['le1_mean']:.1f}", str(r["rank"])] for r in ranked]
         table_figure(headers, rows, "Arquitectura — ranking por error medio",
-                     str(outdir / f"table{salt_suffix}.png"), subtitle=subtitle,
-                     selected_ids=[best_id], top_n=10)
+                     str(outdir / f"table{salt_suffix}.png"), subtitle=subtitle, top_n=10)
         return
 
     headers = ["#", "opt", "lr", "init", "err medio ± σ", "peor px", "≤1px/32", "rank"]
@@ -187,11 +187,11 @@ def _plot_tables(kind, ranked, best_id, outdir, subtitle, salt_suffix):
         lo, hi = chunk[0][-1], chunk[-1][-1]
         table_figure(headers, chunk,
                      f"Hiperparámetros — ranking por error medio (ranks {lo}-{hi})",
-                     str(outdir / f"table_part{part}{salt_suffix}.png"), subtitle=subtitle,
-                     selected_ids=[best_id], top_n=10)
+                     str(outdir / f"table_part{part}{salt_suffix}.png"), subtitle=subtitle, top_n=10)
 
 
-def _plot_loss(ranked, cache, seeds, base_seed, loss_dir, subtitle, salt_str, salt_suffix):
+def _plot_loss(ranked, cache, seeds, base_seed, loss_dir, subtitle, salt_str, salt_suffix,
+               smooth_window=None):
     """Una curva de loss por combinación (media ± σ entre seeds), numerada por combo_id,
     + un overlay con las curvas medias del TOP-10."""
     by_id = {r["combo_id"]: r for r in ranked}
@@ -200,7 +200,7 @@ def _plot_loss(ranked, cache, seeds, base_seed, loss_dir, subtitle, salt_str, sa
         loss_band_curve(
             curves, f"Loss combo #{combo_id} — {by_id[combo_id]['label']}",
             str(loss_dir / f"combo_{combo_id:02d}{salt_suffix}.png"),
-            subtitle=subtitle, logy=True,
+            subtitle=subtitle, logy=True, smooth_window=smooth_window,
         )
 
     top = sorted(ranked, key=lambda r: r["rank"])[:10]
@@ -217,12 +217,13 @@ def _plot_loss(ranked, cache, seeds, base_seed, loss_dir, subtitle, salt_str, sa
         overlaid_curves(series, "Época", "Train loss (BCE)",
                         "TOP-10 por criterio — curvas de loss",
                         str(loss_dir.parent / f"top10_overlay{salt_suffix}.png"),
-                        subtitle=subtitle, logy=True)
+                        subtitle=subtitle, logy=True,
+                        smooth_window=smooth_window, show_raw=bool(smooth_window))
 
 
-def _plot_bars(kind, per_salt, selected, salts, outdir, subtitle):
+def _plot_bars(kind, per_salt, _selected, salts, outdir, subtitle):
     """Barras de ranking. Arquitectura: por arquitectura (orden de generación); DAE con
-    dos series de salt. Hiperparámetros: ordenadas mejor→peor, seleccionado en verde."""
+    dos series de salt. Hiperparámetros: ordenadas mejor→peor, sin marcar ganador."""
     if kind == "architecture":
         any_salt = next(iter(per_salt))
         # eje x = arquitecturas en orden de generación (combo_id)
@@ -244,12 +245,10 @@ def _plot_bars(kind, per_salt, selected, salts, outdir, subtitle):
             ss = _salt_str(salts[0])
             means = [r["mean_mean"] for r in base]
             stds = [r["mean_std"] for r in base]
-            sel_idx = next((i for i, r in enumerate(base)
-                            if r["combo_id"] == selected[ss]), None)
             ranked_bar_study(labels, means, stds, "Error medio de píxel (de 35)",
                              "Arquitectura: error medio por arquitectura",
                              str(outdir / "arch_mean_error.png"), subtitle=subtitle,
-                             selected_idx=sel_idx, top_n=len(labels), rotate=20)
+                             top_n=len(labels), rotate=20)
         return
 
     # hiperparámetros: una figura de barras ordenadas por salt
@@ -259,17 +258,16 @@ def _plot_bars(kind, per_salt, selected, salts, outdir, subtitle):
         labels = [f"#{r['combo_id']}" for r in ranked]
         means = [r["mean_mean"] for r in ranked]
         stds = [r["mean_std"] for r in ranked]
-        sel_idx = next((i for i, r in enumerate(ranked)
-                        if r["combo_id"] == selected[ss]), None)
         suffix = "" if salt is None else f"_salt{salt}"
         title = "Hiperparámetros: error medio (mejor→peor)" + (
             "" if salt is None else f" — salt={salt}")
         ranked_bar_study(labels, means, stds, "Error medio de píxel (de 35)", title,
                          str(outdir / f"hp_ranked{suffix}.png"), subtitle=subtitle,
-                         selected_idx=sel_idx, top_n=10)
+                         top_n=10)
 
 
-def _plot_convergence(per_salt, cache, seeds, base_seed, salts, outdir, subtitle):
+def _plot_convergence(per_salt, cache, seeds, base_seed, salts, outdir, subtitle,
+                      smooth_window=None):
     """Arquitectura: curvas de convergencia superpuestas (media entre seeds) por salt."""
     for salt in salts:
         ss = _salt_str(salt)
@@ -287,7 +285,8 @@ def _plot_convergence(per_salt, cache, seeds, base_seed, salts, outdir, subtitle
             title = "Arquitectura: convergencia" + ("" if salt is None else f" (salt={salt})")
             overlaid_curves(series, "Época", "Train loss (BCE)", title,
                             str(outdir / f"arch_convergence{suffix}.png"),
-                            subtitle=subtitle, logy=True)
+                            subtitle=subtitle, logy=True,
+                            smooth_window=smooth_window, show_raw=bool(smooth_window))
 
 
 # --- motor ----------------------------------------------------------------------------
@@ -392,6 +391,7 @@ def run_study(*, study, kind, configs, clean, seeds, base_seed, with_noise, salt
     if with_noise:
         fixed["salt"] = "/".join(str(s) for s in salts)
         fixed["resample"] = "on"
+        fixed["loss_plot"] = f"media movil {DAE_LOSS_SMOOTH_WINDOW} epocas"
     if kind == "architecture":
         fixed["lr"] = sample["lr"]
         fixed["init"] = sample["init"]
@@ -399,15 +399,17 @@ def run_study(*, study, kind, configs, clean, seeds, base_seed, with_noise, salt
     subtitle = study_subtitle({"data": data}, fixed)
 
     # Figuras.
+    smooth_window = DAE_LOSS_SMOOTH_WINDOW if with_noise else None
     for salt in salts:
         ss = _salt_str(salt)
         salt_suffix = "" if salt is None else f"_salt{salt}"
         _plot_tables(kind, ranked_by_salt[ss], selected[ss], outdir, subtitle, salt_suffix)
         _plot_loss(ranked_by_salt[ss], cache, seeds, base_seed, loss_dir, subtitle,
-                   ss, salt_suffix)
+                   ss, salt_suffix, smooth_window=smooth_window)
     _plot_bars(kind, per_salt, selected, salts, outdir, subtitle)
     if kind == "architecture":
-        _plot_convergence(per_salt, cache, seeds, base_seed, salts, outdir, subtitle)
+        _plot_convergence(per_salt, cache, seeds, base_seed, salts, outdir, subtitle,
+                          smooth_window=smooth_window)
 
     # Reporte a consola del criterio.
     print(f"\nSelección por criterio (menor error medio; empate dentro de ±1σ):")

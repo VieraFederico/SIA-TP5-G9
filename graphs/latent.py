@@ -26,6 +26,22 @@ def _annotate(ax, labels: list[str] | None, points: Array) -> None:
         ax.annotate(label, (x, y), textcoords="offset points", xytext=(5, 5), color=FG)
 
 
+def _annotate_generated(ax, points: Array, labels: list[str] | None = None) -> None:
+    """Etiqueta las muestras generadas para cruzarlas con el mosaico de reconstrucciones."""
+    if labels is None:
+        labels = [f"Sample {i}" for i in range(1, len(points) + 1)]
+    for label, (x, y) in zip(labels, points):
+        ax.annotate(
+            label,
+            (x, y),
+            textcoords="offset points",
+            xytext=(7, 6),
+            color=FG,
+            fontsize=8,
+            zorder=5,
+        )
+
+
 def plot_latent_clouds_generated(
     clouds: Array,
     means: Array,
@@ -35,6 +51,7 @@ def plot_latent_clouds_generated(
     title: str,
     subtitle: str | None = None,
     labels: list[str] | None = None,
+    gen_labels: list[str] | None = None,
     gen_label: str = "generados",
     figsize: tuple = (8, 7),
     mean_size: int = 40,
@@ -54,6 +71,7 @@ def plot_latent_clouds_generated(
     ax.scatter(means[:, 0], means[:, 1], s=mean_size, color=RED, zorder=3, label="medias μ")
     ax.scatter(generated[:, 0], generated[:, 1], s=gen_size, marker="*", color=ORANGE,
                edgecolors="black", linewidths=gen_edge_lw, zorder=4, label=gen_label)
+    _annotate_generated(ax, generated, gen_labels)
 
     if labels is not None:
         for label, (x, y) in zip(labels, means):
@@ -106,6 +124,7 @@ def plot_latent_with_generated(
         output_path: str = "latent_space_with_generated.png",
         title: str = "2D latent space with generated samples",
         subtitle: str | None = None,
+        generated_labels: list[str] | None = None,
 ) -> str:
     """
     Espacio latente del AE con puntos de entrenamiento + puntos generados.
@@ -117,6 +136,7 @@ def plot_latent_with_generated(
         output_path: Where to save the PNG
         title: Plot title
         subtitle: Optional subtitle with hyperparameters
+        generated_labels: Optional labels for generated samples; defaults to Sample 1..N
 
     Returns:
         Path to saved figure
@@ -151,6 +171,7 @@ def plot_latent_with_generated(
         linewidths=1.5,
         zorder=3,
     )
+    _annotate_generated(ax, generated_samples, generated_labels)
 
     ax.set_title(title)
     ax.set_xlabel("Latent dimension 1")
@@ -171,6 +192,7 @@ def plot_latent_distributions_with_generated(
     subtitle: str | None = None,
     samples_per_pattern: int = 20,
     ellipse_std: float = 1.0,
+    generated_labels: list[str] | None = None,
 ) -> str:
     if means.shape[1] != 2:
         raise ValueError(f"Expected 2D latent space, got shape {means.shape}")
@@ -229,6 +251,7 @@ def plot_latent_distributions_with_generated(
         label="Generated samples",
         zorder=4,
     )
+    _annotate_generated(ax, generated_samples, generated_labels)
 
     _annotate(ax, labels, means)
 

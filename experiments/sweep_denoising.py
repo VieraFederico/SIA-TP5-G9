@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from experiments.ae import build_ae_model, DAE_ARCHITECTURE, DAE_ENCODER_WIDTHS
+from experiments.ae import build_ae_model, DAE_ARCHITECTURE, DAE_ARCH_LABEL, DAE_ENCODER_WIDTHS
 from src.utils.evaluation import pixel_errors_per_pattern
 from src.utils.sampling import set_seed
 from src.utils.config import ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE
@@ -37,7 +37,7 @@ def train_model(salt, seed, epochs, clean):
     """Entrena un AE (salt=None) o DAE (salt>0, ruido re-sampleado por época)."""
     set_seed(seed)
     act = make_activations()
-    # Mismo encoder (ganador DAE) para todos los modelos del barrido → comparación justa.
+    # Mismo encoder canónico para todos los modelos del barrido → comparación justa.
     model = build_ae_model(act, seed=seed, encoder_widths=DAE_ENCODER_WIDTHS)
 
     if salt is None:
@@ -127,7 +127,7 @@ def main(argv=None):
     # es igual para todos los modelos y va en el pie para poder comparar.
     add_subtitle(fig, study_subtitle(
         {"data": args.data, "seeds": args.seeds, "épocas": args.epochs},
-        {"arch": "default", "lr": LEARNING_RATE, "mode": TRAINING_MODE, "init": "he",
+        {"arch": DAE_ARCH_LABEL, "lr": LEARNING_RATE, "mode": TRAINING_MODE, "init": "he",
          "bottleneck": 2, "opt": f"adam({ADAM_BETA1},{ADAM_BETA2})", "ε": EPSILON,
          "realizaciones/punto": args.realizations, "ruido": "re-sampleado/época",
          "banda": "media ± σ"},

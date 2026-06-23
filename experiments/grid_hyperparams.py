@@ -18,7 +18,7 @@ import itertools
 from pathlib import Path
 
 from experiments.ae import AE_ENCODER_WIDTHS
-from experiments.experiment import hyperparams_slug
+from experiments.experiment import LATENT_DIM, hyperparams_slug
 from experiments.study_engine import run_study
 from experiments.study_selection import standard_tiebreaker
 from src.data.font import load_fonts
@@ -32,14 +32,20 @@ FIXED_MODE = "batch"
 FIXED_ACT = "relu"
 
 
+def architecture_label(widths):
+    """Nombre estable de la arquitectura usada por este grid."""
+    return "-".join(map(str, list(widths) + [LATENT_DIM]))
+
+
 def build_configs(opts, lrs, inits, *, widths=AE_ENCODER_WIDTHS, mode=FIXED_MODE, act=FIXED_ACT):
     """Producto cartesiano opt×lr×init. combo_id estable por orden de generación."""
     configs = []
+    arch = architecture_label(widths)
     for i, (opt, lr, init) in enumerate(itertools.product(opts, lrs, inits), 1):
         configs.append({
             "combo_id": i, "label": f"{opt}|lr{lr:g}|{init}", "widths": list(widths),
             "opt": opt, "lr": lr, "init": init, "mode": mode, "act": act,
-            "architecture": "default",
+            "architecture": arch,
         })
     return configs
 
@@ -86,7 +92,8 @@ def main(argv=None):
     clean = load_fonts(args.data)
     configs = build_configs(opts, lrs, inits)
 
-    slug = hyperparams_slug({"data": args.data, "mode": FIXED_MODE, "act": FIXED_ACT,
+    slug = hyperparams_slug({"data": args.data, "arch": configs[0]["architecture"],
+                             "mode": FIXED_MODE, "act": FIXED_ACT,
                              "epochs": epochs, "seeds": seeds})
     outdir = Path(args.output_dir) / slug
 
