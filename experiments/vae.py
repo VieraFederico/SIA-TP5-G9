@@ -25,29 +25,35 @@ from experiments.experiment import (
     run_experiment,
 )
 
-# Tamaños por capa (sólo referencia para el log).
-# KL_WEIGHT (β del VAE) ahora sale de config.json vía experiment.
-VAE_ARCHITECTURE = [35, 30, 25, 20, 16, 8, 2, 8, 16, 20, 25, 30, 35]
+# Encoder del VAE = ganador del estudio de arquitectura AE ("deep 35-30-20-10-2").
+# El decoder lo espeja. KL_WEIGHT (β del VAE) sale de config.json vía experiment.
+VAE_ENCODER_WIDTHS = [35, 30, 20, 10]
+VAE_ARCHITECTURE = (
+    VAE_ENCODER_WIDTHS + [LATENT_DIM] + VAE_ENCODER_WIDTHS[::-1]
+)  # 35-30-20-10-2-10-20-30-35
 
 
-def build_vae_model(act: dict, seed : int | None = None) -> VariationalAutoencoder:
-    """encoder (35->8) + cabezas μ y logσ² (8->2 identity) + decoder (2->35)."""
+def build_vae_model(act: dict, seed: int | None = None) -> VariationalAutoencoder:
+    """encoder (35->10) + cabezas μ y logσ² (10->2 identity) + decoder (2->35).
+
+    Topología = ganador del estudio de arquitectura AE; el decoder espeja el encoder."""
+    widths = VAE_ENCODER_WIDTHS
     encoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=35, n_neurons=30, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=30, n_neurons=25, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=25, n_neurons=20, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=20, n_neurons=16, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=16, n_neurons=8, activation=act["relu"],rand_seed=seed),
+        NeuronLayer(n_inputs=widths[i], n_neurons=widths[i + 1], activation=act["relu"], rand_seed=seed)
+        for i in range(len(widths) - 1)
     ])
-    mean_layer = NeuronLayer(n_inputs=8, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
-    log_variance_layer = NeuronLayer(n_inputs=8, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
+    last = widths[-1]
+    mean_layer = NeuronLayer(n_inputs=last, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
+    log_variance_layer = NeuronLayer(n_inputs=last, n_neurons=LATENT_DIM, activation=act["identity"], rand_seed=seed)
+
+    dec_widths = [LATENT_DIM] + widths[::-1]  # 2 -> 10 -> 20 -> 30 -> 35
     decoder = MultilayerPerceptron(layers=[
-        NeuronLayer(n_inputs=LATENT_DIM, n_neurons=8, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=8, n_neurons=16, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=16, n_neurons=20, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=20, n_neurons=25, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=25, n_neurons=30, activation=act["relu"],rand_seed=seed),
-        NeuronLayer(n_inputs=30, n_neurons=35, activation=act["logistic"],rand_seed=seed),
+        NeuronLayer(
+            n_inputs=dec_widths[i], n_neurons=dec_widths[i + 1],
+            activation=act["logistic"] if i == len(dec_widths) - 2 else act["relu"],
+            rand_seed=seed,
+        )
+        for i in range(len(dec_widths) - 1)
     ])
     return VariationalAutoencoder(
         encoder=encoder,

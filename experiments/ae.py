@@ -25,9 +25,14 @@ from experiments.experiment import (
 )
 
 # Anchos del encoder, de la entrada (35) a la capa que alimenta el bottleneck.
-# El decoder los espeja; AE_ARCHITECTURE es la lista completa (para el log).
-AE_ENCODER_WIDTHS = [35, 30, 25, 20, 16, 8, 4]
+# El decoder los espeja; *_ARCHITECTURE es la lista completa (para el log).
+# Arquitecturas elegidas por el estudio de arquitectura (study architecture / -dae):
+#   AE  -> ganador "deep 35-30-20-10-2" (combo #4, rank 1).
+#   DAE -> ganador "deep 35-30-20-10-2" (combo #4) también.
+AE_ENCODER_WIDTHS = [35, 30, 20, 10]
+DAE_ENCODER_WIDTHS = [35, 30, 20, 10]
 AE_ARCHITECTURE = AE_ENCODER_WIDTHS + [LATENT_DIM] + AE_ENCODER_WIDTHS[::-1]
+DAE_ARCHITECTURE = DAE_ENCODER_WIDTHS + [LATENT_DIM] + DAE_ENCODER_WIDTHS[::-1]
 
 
 def build_ae_model(act: dict, seed: int | None = None,
@@ -93,8 +98,11 @@ def run_ae(
 
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise, salt_p)
-    model = build_ae_model(act, seed)
-    trainer, bce = make_trainer(AE_ARCHITECTURE, "binary_cross_entropy")
+    # AE puro y DAE usan la arquitectura ganadora de SU estudio (deep vs shallow).
+    encoder_widths = DAE_ENCODER_WIDTHS if with_noise else AE_ENCODER_WIDTHS
+    architecture = DAE_ARCHITECTURE if with_noise else AE_ARCHITECTURE
+    model = build_ae_model(act, seed, encoder_widths=encoder_widths)
+    trainer, bce = make_trainer(architecture, "binary_cross_entropy")
 
     # Denoising AE: re-sampleamos el ruido en cada época (corrupción distinta de
     # cada patrón) para que aprenda a limpiar y no memorice un ruido fijo

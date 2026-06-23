@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from experiments.ae import build_ae_model, AE_ARCHITECTURE
+from experiments.ae import build_ae_model, DAE_ARCHITECTURE, DAE_ENCODER_WIDTHS
 from src.utils.evaluation import pixel_errors_per_pattern
 from src.utils.sampling import set_seed
 from src.utils.config import ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE
@@ -37,7 +37,8 @@ def train_model(salt, seed, epochs, clean):
     """Entrena un AE (salt=None) o DAE (salt>0, ruido re-sampleado por época)."""
     set_seed(seed)
     act = make_activations()
-    model = build_ae_model(act, seed=seed)
+    # Mismo encoder (ganador DAE) para todos los modelos del barrido → comparación justa.
+    model = build_ae_model(act, seed=seed, encoder_widths=DAE_ENCODER_WIDTHS)
 
     if salt is None:
         x_input, noise_fn = clean.copy(), None
@@ -45,7 +46,7 @@ def train_model(salt, seed, epochs, clean):
         x_input = SaltNPepperNoise(salt).add_noise(clean.copy())
         noise_fn = lambda: SaltNPepperNoise(salt).add_noise(clean.copy())
 
-    train_once(model, x_input, clean, AE_ARCHITECTURE, epochs=epochs, noise_fn=noise_fn)
+    train_once(model, x_input, clean, DAE_ARCHITECTURE, epochs=epochs, noise_fn=noise_fn)
     return model
 
 
