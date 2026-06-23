@@ -14,7 +14,11 @@ from src.network.neuron_layer import NeuronLayer
 from src.noise.salt_n_pepper import SaltNPepperNoise
 from src.utils.sampling import set_seed
 
-from src.utils.config import BATCH_SIZE, EPOCHS, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
+from src.optimizer.adam import AdamOptimizer
+from src.utils.config import (
+    ADAM_BETA1, ADAM_BETA2, BATCH_SIZE, DAE_LEARNING_RATE, EPOCHS, LEARNING_RATE,
+    OUTPUT_ROOT, SALT_P, SEED, TRAINING_MODE,
+)
 from experiments.experiment import (
     LATENT_DIM,
     load_dataset,
@@ -88,21 +92,31 @@ def run_ae(
     save: bool = False,
     show_viz: bool = True,
     seed: int | None = None,
+    epochs: int | None = None,
 ):
     if seed is None:               # --seed overridea; si no, usa el default de config.json
         seed = SEED
     set_seed(seed)
+    n_epochs = EPOCHS if epochs is None else epochs
 
     if salt_p is None:
         salt_p = SALT_P
 
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise, salt_p)
-    # AE puro y DAE usan la arquitectura ganadora de SU estudio (deep vs shallow).
+    # Config canónica (de los estudios): AE puro y DAE comparten arquitectura ganadora
+    # (deep 35-30-20-10-2), pero el DAE usa su propio lr (0.01, ganador hiperparams-DAE).
     encoder_widths = DAE_ENCODER_WIDTHS if with_noise else AE_ENCODER_WIDTHS
     architecture = DAE_ARCHITECTURE if with_noise else AE_ARCHITECTURE
+    lr = DAE_LEARNING_RATE if with_noise else LEARNING_RATE
     model = build_ae_model(act, seed, encoder_widths=encoder_widths)
-    trainer, bce = make_trainer(architecture, "binary_cross_entropy")
+    optimizer = AdamOptimizer(learning_rate=lr, beta1=ADAM_BETA1, beta2=ADAM_BETA2)
+    trainer, bce = make_trainer(architecture, "binary_cross_entropy",
+                                optimizer=optimizer, epochs=n_epochs)
+
+    print(f"[config efectiva] {'DAE' if with_noise else 'AE'}: arch={architecture} · "
+          f"opt=adam · lr={lr} · init=he · mode={TRAINING_MODE} · act=relu · "
+          f"{'salt=' + str(salt_p) + ' resample=' + ('on' if resample_noise else 'off') if with_noise else 'sin ruido'}")
 
     # Denoising AE: re-sampleamos el ruido en cada época (corrupción distinta de
     # cada patrón) para que aprenda a limpiar y no memorice un ruido fijo
@@ -118,8 +132,8 @@ def run_ae(
         "noise": with_noise,
         "salt": salt_p if with_noise else None,
         "resample": resample_noise if with_noise else None,
-        "epochs": EPOCHS,
-        "lr": LEARNING_RATE,
+        "epochs": n_epochs,
+        "lr": lr,
         "batch": BATCH_SIZE,
         "Seed" : seed
     }

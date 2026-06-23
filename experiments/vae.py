@@ -15,7 +15,7 @@ from src.network.neuron_layer import NeuronLayer
 from src.network.variational_autoencoder import VariationalAutoencoder
 from src.utils.sampling import set_seed
 
-from src.utils.config import EPOCHS, KL_WEIGHT, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED
+from src.utils.config import EPOCHS, KL_WEIGHT, LEARNING_RATE, OUTPUT_ROOT, SALT_P, SEED, TRAINING_MODE
 from experiments.experiment import (
     LATENT_DIM,
     load_dataset,
@@ -85,23 +85,30 @@ def run_vae(
     load_path: str | None = None,
     save: bool = False,
     seed: int | None = None,
+    epochs: int | None = None,
 ):
     if seed is None:               # --seed overridea; si no, usa el default de config.json
         seed = SEED
     set_seed(seed)
+    n_epochs = EPOCHS if epochs is None else epochs
     if kl_weight is None:
         kl_weight = KL_WEIGHT
     act = make_activations()
     clean, x_input, target = load_dataset(datatype, with_noise)
     model = build_vae_model(act,seed)
     model.kl_weight = kl_weight
-    trainer, bce = make_trainer(VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence")
+    trainer, bce = make_trainer(VAE_ARCHITECTURE, "binary_cross_entropy + kl_divergence",
+                                epochs=n_epochs)
+
+    print(f"[config efectiva] VAE: arch={VAE_ARCHITECTURE} · opt=adam · lr={LEARNING_RATE} · "
+          f"init=he · mode={TRAINING_MODE} · act=relu · kl={kl_weight} · "
+          f"{'con ruido salt=' + str(SALT_P) if with_noise else 'sin ruido'}")
 
     hp = {
         "data": datatype,
         "noise": with_noise,
         "salt": SALT_P if with_noise else None,
-        "epochs": EPOCHS,
+        "epochs": n_epochs,
         "lr": LEARNING_RATE,
         "kl": kl_weight,
         "Seed" : seed

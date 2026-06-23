@@ -11,7 +11,8 @@ class Config:
     contradictorio (hay un único `learning_rate`) ni metadata muerta. El CLI
     puede overridear cualquiera de estos por flag.
     """
-    learning_rate: float
+    learning_rate: float                      # lr canónico de AE / VAE
+    dae_learning_rate: float                  # lr canónico del DAE (ganador estudio hiperparams-DAE)
     epochs: int
     training_mode: str                        # "online" | "batch" | "minibatch"
     batch_size: int                           # sólo se usa en modo "minibatch"
@@ -47,6 +48,7 @@ def save_config(cfg: Config, path: Path | str = DEFAULT_CONFIG_PATH) -> None:
 CFG = load_config()
 
 LEARNING_RATE = CFG.learning_rate
+DAE_LEARNING_RATE = CFG.dae_learning_rate    # lr del DAE (≠ AE/VAE); ganador del estudio hiperparams-DAE
 EPOCHS = CFG.epochs
 BATCH_SIZE = CFG.batch_size          # sólo afecta el modo "minibatch"
 EPSILON = CFG.epsilon                # umbral de corte por convergencia (no es el ε de Adam)

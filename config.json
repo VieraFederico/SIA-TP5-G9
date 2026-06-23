@@ -1,5 +1,6 @@
 {
   "learning_rate": 0.001,
+  "dae_learning_rate": 0.01,
   "epochs": 7500,
   "training_mode": "batch",
   "batch_size": 5,
