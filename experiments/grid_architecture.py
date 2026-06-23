@@ -28,7 +28,6 @@ ARCHITECTURES = {
     "shallow 35-16-2":    [35, 16],
     "medium 35-20-10-2":  [35, 20, 10],
     "deep 35-30-20-10-2": [35, 30, 20, 10],
-    "default 35..4-2":    [35, 30, 25, 20, 16, 8, 4],
 }
 # Hiperparámetros fijos (declarados) con los que se barre la arquitectura.
 FIXED = {"lr": LEARNING_RATE, "mode": "batch", "init": "he", "act": "relu", "opt": "adam"}
