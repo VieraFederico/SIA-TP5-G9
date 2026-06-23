@@ -44,7 +44,7 @@ python3 main.py ae       [--data letters|emoji] [--noise/--no-noise] [--salt P] 
 python3 main.py vae      [--data emoji|letters]  [--noise/--no-noise] [--kl W] [--save] ...
 python3 main.py generate {ae|vae}  --weights P [--sampling ...] [-n N] [--plot]
 python3 main.py plot     latent    --weights P [--sampling normal|bounds]
-python3 main.py study    {architecture|hyperparams|denoising|kl} [--epochs N] [--seeds K]
+python3 main.py study    {architecture|hyperparams|architecture-dae|hyperparams-dae|denoising|kl} [--epochs N] [--seeds K]
 python3 main.py --help          # ayuda general
 python3 main.py ae --help       # flags de cada subcomando
 ```
@@ -95,7 +95,10 @@ flag los overridea por corrida.
 
 **`plot latent`**: `--weights P` · `--data` · `--sampling normal|bounds` · `--seed` · `--output`.
 
-**`study`**: `--epochs`, `--seeds` (corridas por celda → banda media ± σ); `hyperparams` agrega `--axis {all,lr,mode,init,opt,act,epochs}`; `denoising` agrega `--realizations`; `kl` agrega `--gen-samples`.
+**`study`**: `--epochs` (presupuesto del grid, default 2000), `--seeds` (corridas por celda → banda media ± σ), `--seed`, `--data`.
+- `hyperparams` / `hyperparams-dae`: grid cruzado `opt × lr × init` con flags `--opts adam,gd` · `--lrs 1e-4,…,1e-2` · `--inits he,xavier,normal` · `--smoke` (defaults chicos). El `-dae` agrega `--salts 0.1,0.2`.
+- `architecture` / `architecture-dae`: barren la lista de arquitecturas (HP fijos); flags `--hidden-act relu|tanh` · `--smoke`. El `-dae` agrega `--salts 0.1,0.2`.
+- `denoising` agrega `--realizations`; `kl` agrega `--gen-samples`.
 
 ---
 
@@ -109,10 +112,15 @@ output/
 ├── ae/    <kind>/<slug-hp>/...     # autoencoder sin ruido (1.a)
 ├── dae/   <kind>/<slug-hp>/...     # denoising AE (1.b)
 ├── vae/   <kind>/<slug-hp>/...     # variational (2)
-└── study/ {architecture,hyperparams,denoising,kl}/...
+└── study/ {architecture,hyperparams,architecture-dae,hyperparams-dae,denoising,kl}/<slug>/...
 ```
 con `<kind>` ∈ `latent_space`, `presentation`, `weights`, `generated`. Los `.npz` son arrays
 de NumPy por capa (`layer_0_w`, `layer_0_b`, …). `output/` no se versiona.
+
+Cada estudio de grid (`architecture`, `hyperparams`, y sus `-dae`) deja bajo su `<slug>`:
+`raw.csv` (una fila por combinación × [salt] × seed, fuente reproducible), `summary.csv`
+(una por combinación con `rank` y marca `best`/`tie`), tabla(s) de ranking PNG, barras
+(DAE: dos series por salt), `loss/combo_NN.png` por combinación + `top10_overlay.png`.
 
 ---
 
@@ -141,17 +149,30 @@ python3 main.py generate ae --weights output/ae/weights/<hiperparams>/weights.np
 
 ## Estudios / barridos
 
-Comparativos con seed fija y mismas escalas (un eje por script, no monolito):
+Cuatro estudios de grid (AE + DAE) corren sobre un **motor compartido**
+(`experiments/study_engine.py`) con un **criterio de selección único**
+(`experiments/study_selection.py`): entrenan cada combinación con seed fija (N seeds →
+banda media ± σ), evalúan con la métrica canónica, vuelcan CSV crudo + resumen, eligen el
+mejor por **menor error medio de píxel** (empate dentro de ±1σ = indistinguible, no se
+canta ganador) y plotean tablas/barras/curvas de loss.
 
 ```bash
-python3 main.py study architecture     # profundidad/ancho del encoder (bottleneck fijo en 2)
-python3 main.py study hyperparams --axis lr   # lr / mode / init / opt / act / epochs
-python3 main.py study denoising         # DAE: error de reconstrucción vs nivel de ruido
-python3 main.py study kl                # VAE: trade-off reconstrucción vs generación según kl_weight
+python3 main.py study hyperparams           # grid cruzado opt×lr×init (30 combos), AE puro
+python3 main.py study hyperparams-dae        # idem en denoising, × salt 0.1/0.2 (60 celdas)
+python3 main.py study architecture           # lista de arquitecturas (bottleneck fijo 2), AE puro
+python3 main.py study architecture-dae       # idem en denoising, dos series salt 0.1/0.2
+python3 main.py study hyperparams --smoke     # validación rápida del pipeline (épocas/seeds bajas)
+python3 main.py study denoising              # DAE: error de reconstrucción vs nivel de ruido
+python3 main.py study kl                     # VAE: trade-off reconstrucción vs generación según kl_weight
 ```
 
-`study kl` es la base con la que se eligió `kl_weight = 0.03`. Internamente despachan a
-`experiments/grid_architecture.py`, `grid_hyperparams.py`, `sweep_denoising.py`, `sweep_kl.py`.
+- **DAE**: el error se mide contra el patrón **limpio** (no el ruidoso); ruido re-sampleado
+  por época (`resample=on`). El `<=1px` es descriptivo, no criterio.
+- El grid corre a `--epochs` fijo (default 2000) para comparar en igualdad; los CSV son
+  **reanudables** (al rearrancar saltea celdas ya presentes por `label+salt+seed`).
+- `study kl` es la base con la que se eligió `kl_weight = 0.03`. Despachan a
+  `experiments/grid_architecture.py`, `grid_hyperparams.py`, `architecture_dae.py`,
+  `hyperparams_dae.py`, `sweep_denoising.py`, `sweep_kl.py`.
 
 ---
 
@@ -166,7 +187,10 @@ python3 main.py study kl                # VAE: trade-off reconstrucción vs gene
 ├── experiments/            # orquestación / scripts que producen resultados
 │   ├── ae.py  vae.py  experiment.py  trainer.py
 │   ├── generate.py  generate_vae.py  plot_latent_combined.py
-│   └── grid_architecture.py  grid_hyperparams.py  sweep_denoising.py  sweep_kl.py
+│   ├── study_engine.py  study_selection.py        # motor + criterio compartidos por los 4 estudios de grid
+│   ├── grid_architecture.py  grid_hyperparams.py  # AE: arquitectura / hiperparámetros
+│   ├── architecture_dae.py   hyperparams_dae.py   # DAE: idem en denoising (salt 0.1/0.2)
+│   └── sweep_denoising.py  sweep_kl.py
 ├── src/                    # librería reutilizable
 │   ├── network/ activation/ cost/ optimizer/ noise/ metric/   # núcleo numérico
 │   ├── data/    font.py                                       # carga de patrones

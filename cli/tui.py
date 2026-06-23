@@ -189,28 +189,38 @@ def _menu_generate(cfg):
 def _menu_study(cfg):
     kind = _ask(_select("Estudio:", choices=[
         questionary.Choice("Arquitectura", "architecture",
-                           description="varía profundidad/ancho del encoder (bottleneck fijo en 2)"),
+                           description="varía profundidad/ancho del encoder (bottleneck fijo en 2); AE puro"),
         questionary.Choice("Hiperparámetros", "hyperparams",
-                           description="arquitectura fija; barre learning rate / modo / init"),
+                           description="grid cruzado opt×lr×init (30 combos); AE puro"),
         questionary.Choice("Arquitectura (DAE)", "architecture-dae",
-                           description="igual que arquitectura pero en denoising; series salt 0.1 y 0.2, error vs limpio"),
+                           description="igual que arquitectura pero denoising; dos series salt 0.1 y 0.2, error vs limpio"),
         questionary.Choice("Hiperparámetros (DAE)", "hyperparams-dae",
-                           description="igual que hiperparámetros pero en denoising; series salt 0.1 y 0.2, error vs limpio"),
+                           description="grid opt×lr×init × salt 0.1 y 0.2 (60 celdas); error vs limpio"),
         questionary.Choice("Barrido KL (β-VAE)", "kl",
                            description="VAE: trade-off reconstrucción vs generación según kl_weight"),
         questionary.Choice("Barrido denoising", "denoising",
                            description="DAE: error de reconstrucción vs nivel de ruido"),
     ]))
+
+    grid_kinds = ("architecture", "hyperparams", "architecture-dae", "hyperparams-dae")
+    if kind in grid_kinds:
+        smoke = _ask(_confirm("¿Modo smoke (épocas/seeds bajas, ejes recortados)?", default=False))
+        argv = ["study", kind]
+        if smoke:
+            argv += ["--smoke"]
+        else:
+            epochs = _ask(_text("Épocas (presupuesto del grid):", default="2000"))
+            seeds = _ask(_text("Seeds por celda:", default="3"))
+            argv += ["--epochs", epochs, "--seeds", seeds]
+        _dispatch_main(argv)
+        return
+
+    # kl / denoising: barridos con su propio main.
     epochs = _ask(_text("Épocas:", default=str(cfg.epochs)))
     seeds = _ask(_text("Seeds por celda:", default="3"))
     argv = ["study", kind, "--epochs", epochs, "--seeds", seeds]
-
-    if kind in ("hyperparams", "hyperparams-dae"):
-        argv += ["--axis", _ask(_select(
-            "Eje:", choices=["all", "lr", "mode", "init", "opt", "act", "epochs"]))]
     if kind == "denoising":
         argv += ["--realizations", _ask(_text("Realizaciones por punto:", default="5"))]
-
     _dispatch_main(argv)
 
 

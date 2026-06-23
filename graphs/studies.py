@@ -14,6 +14,11 @@ from graphs.style import (
 # Colores para curvas superpuestas (legibles sobre negro).
 PALETTE = [BLUE, ORANGE, RED, "#7ee787", "#c78bff", "#ffd866"]
 
+GREEN = "#3fb950"          # seleccionado por el criterio
+TOP_TINT = "#10202b"       # fondo tenue del TOP-N en las tablas
+SEL_TINT = "#16331a"       # fondo del seleccionado en las tablas
+HEADER_BG = "#11151c"
+
 
 def _legend(ax):
     leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM, fontsize=8)
@@ -65,6 +70,98 @@ def grouped_bar_study(labels, series, ylabel, title, path,
         ax.set_ylim(ylim)
     _legend(ax)
     dark_grid(ax)
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, path)
+
+
+def ranked_bar_study(labels, means, stds, ylabel, title, path,
+                     subtitle=None, selected_idx=None, top_n=10, rotate=0, ylim=None):
+    """Barras de error medio (ya ordenadas mejor→peor por el caller) con banda de σ.
+
+    Resalta el TOP-N (azul fuerte) y marca el seleccionado en verde. selected_idx es
+    el índice (0-based) en la lista ya ordenada."""
+    x = np.arange(len(labels))
+    fig, ax = dark_figure(figsize=(11, 5.5))
+    colors = [BLUE if i < top_n else FG_DIM for i in range(len(labels))]
+    if selected_idx is not None and 0 <= selected_idx < len(colors):
+        colors[selected_idx] = GREEN
+    ax.bar(x, means, yerr=stds, capsize=3, color=colors)
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=rotate, ha="right" if rotate else "center", fontsize=8)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    dark_grid(ax)
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, path)
+
+
+def loss_band_curve(curves, title, path, subtitle=None, logy=True, ylim=None,
+                    label=None, color=None):
+    """Curva de loss media ± σ entre seeds para UNA combinación.
+
+    curves = lista de curvas por seed (longitudes posiblemente distintas: se trunca a
+    la más corta). Banda sombreada = ± σ entre seeds."""
+    curves = [list(c) for c in curves if c is not None and len(c) > 0]
+    fig, ax = dark_figure(figsize=(8, 5))
+    if curves:
+        length = min(len(c) for c in curves)
+        mat = np.array([c[:length] for c in curves], dtype=float)
+        mean, std = mat.mean(axis=0), mat.std(axis=0)
+        x = np.arange(length)
+        col = color or BLUE
+        (ax.semilogy if logy else ax.plot)(x, mean, color=col, linewidth=1.4, label=label)
+        ax.fill_between(x, np.clip(mean - std, 1e-12, None), mean + std,
+                        color=col, alpha=0.2, linewidth=0)
+    ax.set_xlabel("Época")
+    ax.set_ylabel("Train loss (BCE)")
+    ax.set_title(title)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    if label:
+        _legend(ax)
+    dark_grid(ax)
+    add_subtitle(fig, subtitle)
+    return save_dark(fig, path)
+
+
+def table_figure(headers, rows, title, path, subtitle=None,
+                 selected_ids=None, top_n=10, id_col=0):
+    """Tabla de presentación (PNG), filas ya ordenadas por el criterio (rank asc).
+
+    Resalta el TOP-N y marca en verde la(s) fila(s) cuyo id (columna id_col) está en
+    selected_ids. rows = lista de listas de strings."""
+    selected_ids = {str(s) for s in (selected_ids or [])}
+    n = len(rows)
+    fig_h = max(2.2, 0.4 * (n + 1) + 1.0)
+    fig, ax = dark_figure(figsize=(11, fig_h))
+    ax.axis("off")
+    ax.set_title(title, color=FG, pad=14)
+
+    tbl = ax.table(cellText=rows, colLabels=headers, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(8)
+    tbl.scale(1, 1.35)
+
+    for (r, c), cell in tbl.get_celld().items():
+        cell.set_edgecolor(FG_DIM)
+        text = cell.get_text()
+        if r == 0:
+            cell.set_facecolor(HEADER_BG)
+            text.set_color(FG)
+            text.set_weight("bold")
+            continue
+        # r>=1 son filas de datos (1-based porque la 0 es el header).
+        rid = rows[r - 1][id_col]
+        if rid in selected_ids:
+            cell.set_facecolor(SEL_TINT)
+        elif r <= top_n:
+            cell.set_facecolor(TOP_TINT)
+        else:
+            cell.set_facecolor(BLACK)
+        text.set_color(FG)
+
     add_subtitle(fig, subtitle)
     return save_dark(fig, path)
 
