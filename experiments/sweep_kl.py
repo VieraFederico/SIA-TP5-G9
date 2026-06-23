@@ -24,11 +24,11 @@ from src.utils.sampling import set_seed
 from src.utils.config import ADAM_BETA1, ADAM_BETA2, EPOCHS, EPSILON, LEARNING_RATE, TRAINING_MODE
 from experiments.experiment import make_activations, study_subtitle, train_once
 from src.data.font import load_fonts
-from graphs import plot_latent_clouds_generated
-from graphs.style import ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark
+from graphs import plot_latent_distributions
+from graphs.style import BLUE, FG, ORANGE, RED, add_subtitle, dark_figure, dark_grid, save_dark
 from experiments.vae import VAE_ARCHITECTURE, build_vae_model
 
-KL_LEVELS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+KL_LEVELS = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.1, 0.3, 1.0]
 PANEL_LIMITS = (-3.5, 3.5)
 
 
@@ -63,17 +63,16 @@ def generation_distance(model, clean, gen_z):
 
 
 def save_latent_figure(model, clean, gen_z, cloud_rng, kl, outdir, cloud_samples, subtitle=None):
-    """Un espacio latente por nivel: nubes + medias + generados (estrellas)."""
-    means, stds = model.get_latent_distributions(clean)
-    eps = cloud_rng.standard_normal((len(clean), cloud_samples, 2))
-    clouds = (means[:, None, :] + stds[:, None, :] * eps).reshape(-1, 2)
+    """Un espacio latente por nivel: nube de samples + elipse 1σ + media μ (SIN generados).
 
-    plot_latent_clouds_generated(
-        clouds, means, gen_z[:12],
+    Muestra cómo cambian las DISTRIBUCIONES (σ) al variar kl; los generados z~N(0,1)
+    no van acá (son de la generación, no de la estructura del latente)."""
+    means, stds = model.get_latent_distributions(clean)
+    plot_latent_distributions(
+        means, stds,
         output_path=str(outdir / f"latent_kl-{kl}.png"),
         title=f"Espacio latente VAE — kl = {kl}",
-        subtitle=subtitle, gen_label="generados z~N(0,1)",
-        figsize=(7, 6), mean_size=30, gen_size=150, gen_edge_lw=0.5,
+        subtitle=subtitle,
         panel_limits=PANEL_LIMITS,
     )
 
@@ -85,10 +84,16 @@ def save_metric_figure(kls, values, ylabel, title, color, filename, outdir, subt
         # banda: media ± desvío entre seeds
         v, s = np.array(values), np.array(stds)
         ax.fill_between(kls, v - s, v + s, color=color, alpha=0.18, linewidth=0)
-    ax.set_title(title)
+    if title:
+        ax.set_title(title)
     ax.set_xlabel("kl_weight")
+    ax.set_xscale("log")  # kl abarca 0.01–1.0; log lo hace legible
+    ax.set_xticks(kls)                       # tick en cada kl real (no en potencias de 10)
+    ax.set_xticklabels([str(k) for k in kls], rotation=45, ha="right", fontsize=9)
+    ax.minorticks_off()                      # sin los ticks menores del log que ensucian
     ax.set_ylabel(ylabel)
     dark_grid(ax)
+    fig.subplots_adjust(bottom=0.2)  # espacio para que el subtítulo no pise el label del eje x
     add_subtitle(fig, subtitle)
     save_dark(fig, str(outdir / filename))
 
@@ -143,6 +148,10 @@ def main(argv=None):
                        "Costo: reconstrucción vs kl", RED, "recon_error.png", outdir, sub, stds=rec_s)
     save_metric_figure(KL_LEVELS, kl_m, "KL divergence",
                        "KL vs kl (→0 = posterior collapse)", ORANGE, "kl_divergence.png", outdir, sub, stds=kl_s)
+    save_metric_figure(KL_LEVELS, gen_m, "Distancia de generación (px)",
+                       "", BLUE, "generation_distance.png", outdir, sub)
+    save_metric_figure(KL_LEVELS, sig_m, "σ medio de las nubes",
+                       "σ vs kl (→1 = colapso al prior)", FG, "sigma_mean.png", outdir, sub)
 
     print(f"\nTodo guardado en: {outdir}/")
 

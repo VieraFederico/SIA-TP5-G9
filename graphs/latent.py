@@ -272,6 +272,7 @@ def plot_latent_distributions(
     subtitle: str | None = None,
     samples_per_pattern: int = 20,
     ellipse_std: float = 1.0,
+    panel_limits: tuple[float, float] | None = None,
 ) -> str:
     """Espacio latente del VAE: por patrón, nube de samples + elipse 1σ + media μ."""
     if means.shape[1] != 2:
@@ -321,6 +322,9 @@ def plot_latent_distributions(
     ax.set_xlabel("Latent mean dimension 1")
     ax.set_ylabel("Latent mean dimension 2")
     dark_grid(ax)
+    if panel_limits is not None:
+        ax.set_xlim(*panel_limits)
+        ax.set_ylim(*panel_limits)
     dark_legend(ax, ["Samples z", f"{ellipse_std:g}σ region", "Latent mean μ"])
     add_subtitle(fig, subtitle)
     return save_dark(fig, output_path)
