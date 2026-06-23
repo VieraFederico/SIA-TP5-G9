@@ -11,6 +11,7 @@ MUTED = "#8b94a6"      # subtítulo de hiperparámetros (gris legible sobre negr
 
 # Paleta de datos (dark mode)
 BLUE = "#4aa3ff"       # samples / curvas
+LATENT_BLUE = "#6ec8ff"  # nubes/samples del espacio latente (más legible sobre negro)
 CYAN = "#2ee6d6"       # puntos latentes del AE (alto contraste sobre negro)
 ORANGE = "#ffb454"     # elipses 1σ
 RED = "#ff6b6b"        # medias μ

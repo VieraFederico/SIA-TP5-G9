@@ -13,7 +13,7 @@ from matplotlib.patches import Ellipse
 
 from src.activation.activation import Array
 from graphs.style import (
-    BLACK, BLUE, CYAN, FG, FG_DIM, ORANGE, RED,
+    BLACK, CYAN, FG, FG_DIM, LATENT_BLUE, ORANGE, RED,
     add_subtitle, dark_figure, dark_grid, dark_legend, save_dark,
 )
 
@@ -49,7 +49,7 @@ def plot_latent_clouds_generated(
 
     Lo usan sweep_kl (panel con límites fijos) y plot_latent_combined (con etiquetas)."""
     fig, ax = dark_figure(figsize=figsize)
-    ax.scatter(clouds[:, 0], clouds[:, 1], s=6, color=BLUE, alpha=0.15, linewidths=0,
+    ax.scatter(clouds[:, 0], clouds[:, 1], s=6, color=LATENT_BLUE, alpha=0.15, linewidths=0,
                label="z ~ q(z|x) (explorado)")
     ax.scatter(means[:, 0], means[:, 1], s=mean_size, color=RED, zorder=3, label="medias μ")
     ax.scatter(generated[:, 0], generated[:, 1], s=gen_size, marker="*", color=ORANGE,
@@ -130,7 +130,7 @@ def plot_latent_with_generated(
     ax.scatter(
         positions[:, 0],
         positions[:, 1],
-        color=BLUE,
+        color=LATENT_BLUE,
         s=60,
         alpha=0.7,
         label="Training data",
@@ -188,7 +188,7 @@ def plot_latent_distributions_with_generated(
             ax.scatter(
                 samples[:, 0],
                 samples[:, 1],
-                color=BLUE,
+                color=LATENT_BLUE,
                 alpha=0.18,
                 s=12,
                 linewidths=0,
@@ -266,7 +266,7 @@ def plot_latent_distributions(
             ax.scatter(
                 samples[:, 0],
                 samples[:, 1],
-                color=BLUE,
+                color=LATENT_BLUE,
                 alpha=0.18,
                 s=12,
                 linewidths=0,
