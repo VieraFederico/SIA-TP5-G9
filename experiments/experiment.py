@@ -34,6 +34,7 @@ from src.utils.weights_io import load_weights, save_weights
 
 # Dimensión del cuello de botella latente (2D, requisito del TP para poder graficarlo).
 LATENT_DIM = 2
+DAE_LOSS_SMOOTH_WINDOW = 101
 
 
 def hyperparams_slug(hp: dict) -> str:
@@ -255,9 +256,14 @@ def _save_presentation_plots(model_type, hp, plot_title, clean, x_input, reconst
     print(f"Reconstructions plot saved to: {recon_file}")
 
     if history.get("train_error"):
+        smooth_window = DAE_LOSS_SMOOTH_WINDOW if model_type == "dae" else None
+        loss_subtitle = subtitle
+        if smooth_window:
+            loss_subtitle = f"{subtitle} | loss_plot=media movil {smooth_window} epocas"
         loss_file = plot_loss_curve(
             history, present("loss.png"),
-            title=f"{plot_title}: curva de loss", subtitle=subtitle,
+            title=f"{plot_title}: curva de loss", subtitle=loss_subtitle,
+            smooth_window=smooth_window,
         )
         print(f"Loss curve saved to: {loss_file}")
 

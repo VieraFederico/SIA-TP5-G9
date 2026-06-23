@@ -18,6 +18,23 @@ from graphs.style import (
 IMG_KW = dict(cmap="magma", vmin=0.0, vmax=1.0, interpolation="nearest")
 
 
+def _moving_average(values, window):
+    """Media móvil centrada; mantiene el largo de la curva."""
+    y = np.asarray(values, dtype=float)
+    if window is None or window <= 1 or len(y) < 3:
+        return y
+    w = min(int(window), len(y))
+    if w % 2 == 0:
+        w -= 1
+    if w <= 1:
+        return y
+    left = w // 2
+    right = w - 1 - left
+    padded = np.pad(y, (left, right), mode="edge")
+    kernel = np.ones(w, dtype=float) / w
+    return np.convolve(padded, kernel, mode="valid")
+
+
 def _grid_figure(nrows, ncols, figsize):
     """subplots con fondo negro; devuelve (fig, axes aplanados)."""
     fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
@@ -39,20 +56,36 @@ def _show(ax, pattern, title=None):
         ax.set_title(title, color=FG, fontsize=8)
 
 
-def plot_loss_curve(history, path, title="Curva de loss", subtitle=None):
-    """Error de entrenamiento por época (y validación si la hay)."""
+def plot_loss_curve(history, path, title="Curva de loss", subtitle=None, smooth_window=None):
+    """Error de entrenamiento por época (y validación si la hay).
+
+    smooth_window dibuja una media móvil encima de la curva cruda, útil para DAE
+    cuando el ruido se re-samplea en cada época.
+    """
     train = history.get("train_error") or []
     if not train:
         return None
 
     fig, ax = dark_figure(figsize=(9, 6))
-    ax.plot(range(1, len(train) + 1), train, color=BLUE, linewidth=1.4, label="train")
+    x_train = np.arange(1, len(train) + 1)
+    train_smooth = _moving_average(train, smooth_window)
+    if smooth_window and smooth_window > 1:
+        ax.plot(x_train, train, color=BLUE, linewidth=0.7, alpha=0.25)
+        ax.plot(x_train, train_smooth, color=BLUE, linewidth=1.8, label="train (suavizado)")
+    else:
+        ax.plot(x_train, train, color=BLUE, linewidth=1.4, label="train")
     val = history.get("val_error") or []
     if any(v is not None for v in val):
-        ax.plot(range(1, len(val) + 1), val, color=ORANGE, linewidth=1.4, label="val")
-        leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM)
-        for t in leg.get_texts():
-            t.set_color(FG)
+        x_val = np.arange(1, len(val) + 1)
+        val_smooth = _moving_average(val, smooth_window)
+        if smooth_window and smooth_window > 1:
+            ax.plot(x_val, val, color=ORANGE, linewidth=0.7, alpha=0.25)
+            ax.plot(x_val, val_smooth, color=ORANGE, linewidth=1.8, label="val (suavizado)")
+        else:
+            ax.plot(x_val, val, color=ORANGE, linewidth=1.4, label="val")
+    leg = ax.legend(facecolor=BLACK, edgecolor=FG_DIM)
+    for t in leg.get_texts():
+        t.set_color(FG)
 
     ax.set_xlabel("Época")
     ax.set_ylabel("Error de reconstrucción (BCE)")
